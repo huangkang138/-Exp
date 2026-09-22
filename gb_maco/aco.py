@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 from random import Random
+from struct import pack, unpack
+from time import time
 
 from .granular_ball import GranularBall
 from .tsp import City, Route, path_len
@@ -31,6 +33,32 @@ class Ant:
 
     route: Route
     visited: list[bool]
+
+
+def _float32(value: float) -> float:
+    """按 C++ 的单精度 float 舍入 FES 运算结果。
+    原 C++：main.cpp:1127 的 float FES，main.cpp:173、1159、1170 的运算。
+    """
+    return unpack("f", pack("f", value))[0]
+
+
+_INT_RANDOM: Random | None = None
+_REAL_RANDOM: Random | None = None
+
+
+def _source_randoms(seed: int | None) -> tuple[Random, Random]:
+    """保留 C++ 两个独立的静态随机数流，并跨实验运行延续状态。
+    原 C++：main.cpp:261 random_probability、267 random_int。
+    Python 的 Random 与 Boost 的 mt19937 种子展开和分布实现仍不同。
+    """
+    global _INT_RANDOM, _REAL_RANDOM
+    if seed is not None:
+        return Random(seed), Random(seed)
+    if _INT_RANDOM is None:
+        _INT_RANDOM = Random(int(time()))
+    if _REAL_RANDOM is None:
+        _REAL_RANDOM = Random(int(time()))
+    return _INT_RANDOM, _REAL_RANDOM
 
 
 def _copy_route(route: Route) -> Route:
@@ -184,7 +212,7 @@ class GBMACO:
         self.city_to_ball = city_to_ball
         self.balls = granular_balls
         self.count = len(cities)
-        self.random = Random(self.config.seed)
+        self.start_random, self.selection_random = _source_randoms(self.config.seed)
         self.tau_0 = self.config.ant_count / initial_route.length
         self.matrices = [self._new_matrix(), self._new_matrix()]
         self._boost_initial_route(initial_route)
@@ -250,11 +278,11 @@ class GBMACO:
         total = sum(weights)
         if total <= 0:
             return available[0]
-        threshold = self.random.random() * total
+        probability = self.selection_random.random()
         cumulative = 0.0
         for city, weight in zip(available, weights):
-            cumulative += weight
-            if threshold <= cumulative:
+            cumulative += weight / total
+            if probability <= cumulative:
                 return city
         return available[-1]
 
@@ -264,7 +292,7 @@ class GBMACO:
         """
         ants: list[Ant] = []
         for group in assignments:
-            start = self.random.randrange(self.count)
+            start = self.start_random.randrange(self.count)
             visited = [False] * self.count
             visited[start] = True
             ant = Ant(Route([start]), visited)
@@ -314,7 +342,7 @@ class GBMACO:
                     self.city_to_ball[u] != self.city_to_ball[v]
                     for u, v in removed_edges
                 )
-                threshold = int(self.fes / self.config.max_fes * n)
+                threshold = int(_float32(_float32(self.fes / self.config.max_fes) * n))
                 if not cross_ball and any(
                     edge in self.key_edges[:threshold] for edge in removed_edges
                 ):
@@ -327,7 +355,7 @@ class GBMACO:
                     if old_distance - new_distance < 0.1:
                         continue
                 # 源码中的“边界点”分支没有实际操作，因此无需移植空分支。
-                self.fes += 4.0 / n
+                self.fes = _float32(self.fes + _float32(4.0 / n))
                 if new_distance <= old_distance:
                     route.city_path[i : j + 1] = reversed(route.city_path[i : j + 1])
                     route.length = path_len(route, self.distance)
@@ -446,7 +474,10 @@ class GBMACO:
             if (
                 group_count < self.config.max_pheromones
                 and self.config.max_pheromones > 2
-                and self.fes >= expansion_count * self.config.max_fes / (self.config.max_pheromones - 2)
+                and self.fes >= _float32(
+                    _float32(float(expansion_count) * self.config.max_fes)
+                    / (self.config.max_pheromones - 2)
+                )
             ):
                 self.matrices.append([row.copy() for row in self.matrices[least_similar]])
                 previous_best.append(_copy_route(previous_best[least_similar]))
@@ -455,6 +486,6 @@ class GBMACO:
                 assignments = _assignments(sizes)
                 expansion_count += 1
 
-            self.fes += self.config.ant_count
+            self.fes = _float32(self.fes + self.config.ant_count)
             self._update_key_edges()
         return sorted(self.best_routes, key=lambda route: route.length)
