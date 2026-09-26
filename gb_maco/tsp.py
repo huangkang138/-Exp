@@ -112,12 +112,14 @@ def greed_route(
     """
     city_count = len(cities)
     visited = [False] * city_count
+    #设置初始起点
     visited[start_city_index] = True
     current = start_city_index
     route = Route(city_path=[cities[current].number])
 
     for _ in range(1, city_count):
         current_ball = city_to_ball[current]
+        #当前粒球内还有多少个城市没有访问。
         remaining = sum(
             not visited[index] and city_to_ball[index] == current_ball
             for index in range(city_count)

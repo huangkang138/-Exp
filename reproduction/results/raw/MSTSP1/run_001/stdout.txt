@@ -1,0 +1,1 @@
+simple1_9 run 1: best=680, best_solutions=3, candidate_routes=7, output=D:\Project\��������\GB-MACO_python\reproduction\results\raw\MSTSP1\run_001\program_output\simple1_9_RUN_0.alg_solution

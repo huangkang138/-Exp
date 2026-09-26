@@ -198,9 +198,11 @@ def connect_ball_overlap(
     ]
 
     # 第一遍只记录直接重叠；每个球最多参与一次 hardlap 计数。
+    #依次取出第一个球，同时获得它的下标 i
     for i, first in enumerate(balls):
         if first.out == 1:
             continue
+        #只检查 first 后面的球
         for second in balls[i + 1 :]:
             if second.out == 1:
                 continue
@@ -274,6 +276,7 @@ def gbc(data: list[Point2D]) -> list[GranularBall]:
     while True:
         old_count = len(pending) + len(finished)
         pending = _divide(pending, finished)
+        #如果这一轮没有一次分裂成功就退出
         if len(pending) + len(finished) == old_count:
             pending = finished
             break

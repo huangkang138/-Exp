@@ -1,0 +1,1 @@
+geometry5_10 run 1: best=78, best_solutions=14, candidate_routes=14, output=D:\Project\球粒计算\GB-MACO_python\reproduction\results\raw\MSTSP11\run_001\program_output\geometry5_10_RUN_0.alg_solution

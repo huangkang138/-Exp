@@ -1,0 +1,1 @@
+simple5_12 run 1: best=754, best_solutions=2, candidate_routes=2, output=D:\Project\球粒计算\GB-MACO_python\reproduction\results\raw\MSTSP5\run_001\program_output\simple5_12_RUN_0.alg_solution

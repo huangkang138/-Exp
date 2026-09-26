@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "project_root": "..",
+  "benchmark_dir": "benchmark_MSTSP",
+  "runner_module": "gb_maco.runner",
+  "output_root": "reproduction/results",
+  "default_profile": "source_original",
+  "default_runs": 30,
+  "timeout_seconds": 3600,
+  "seed": {
+    "source_original": null,
+    "description": "null preserves the Python runner's current time-seeded behavior; --seed-start enables explicit deterministic runs"
+  },
+  "source_parameters": {
+    "ant_num": 150,
+    "NP": null,
+    "alpha": 1.0,
+    "beta": 1.5,
+    "rho": 0.3,
+    "pheromone_update_percentage": 0.3,
+    "initial_pheromone": "tau0 = ant_num / greedy_route_length",
+    "initial_route_boost_factor": 2.0,
+    "pheromone_floor": 1e-64,
+    "initial_pheromone_matrices": 2,
+    "max_pheromone_matrices": 9,
+    "Mmin": null,
+    "Mmax": null,
+    "msize": null,
+    "runs": 30,
+    "archive": "best_routes: edge-distinct candidate routes; no fixed capacity",
+    "two_opt": "granular-ball/key-edge constrained 2-opt; no standalone CLI parameter"
+  },
+  "profiles": {
+    "source_original": {
+      "status": "runnable",
+      "description": "Current public Python conversion parameters"
+    },
+    "paper_setting": {
+      "status": "unverified",
+      "description": "MaxFes is known, but paper NP and adaptive niche msize are not implemented as equivalent Python parameters; execution is blocked",
+      "NP": {
+        "MSTSP1-MSTSP12": 150,
+        "MSTSP13-MSTSP25": 300
+      },
+      "Mmin": 2,
+      "Mmax": 9
+    }
+  },
+  "instances": {
+    "MSTSP1":  {"file": "simple1_9.tsp",       "solution_file": "simple1_9.solution",       "city_count": 9,  "type": "Simple",    "max_fes": 60000},
+    "MSTSP2":  {"file": "simple2_10.tsp",      "solution_file": "simple2_10.solution",      "city_count": 10, "type": "Simple",    "max_fes": 60000},
+    "MSTSP3":  {"file": "simple3_10.tsp",      "solution_file": "simple3_10.solution",      "city_count": 10, "type": "Simple",    "max_fes": 60000},
+    "MSTSP4":  {"file": "simple4_11.tsp",      "solution_file": "simple4_11.solution",      "city_count": 11, "type": "Simple",    "max_fes": 60000},
+    "MSTSP5":  {"file": "simple5_12.tsp",      "solution_file": "simple5_12.solution",      "city_count": 12, "type": "Simple",    "max_fes": 60000},
+    "MSTSP6":  {"file": "simple6_12.tsp",      "solution_file": "simple6_12.solution",      "city_count": 12, "type": "Simple",    "max_fes": 60000},
+    "MSTSP7":  {"file": "geometry1_10.tsp",    "solution_file": "geometry1_10.solution",    "city_count": 10, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP8":  {"file": "geometry2_12.tsp",    "solution_file": "geometry2_12.solution",    "city_count": 12, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP9":  {"file": "geometry3_10.tsp",    "solution_file": "geometry3_10.solution",    "city_count": 10, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP10": {"file": "geometry4_10.tsp",    "solution_file": "geometry4_10.solution",    "city_count": 10, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP11": {"file": "geometry5_10.tsp",    "solution_file": "geometry5_10.solution",    "city_count": 10, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP12": {"file": "geometry6_15.tsp",    "solution_file": "geometry6_15.solution",    "city_count": 15, "type": "Geometry",  "max_fes": 60000},
+    "MSTSP13": {"file": "composite1_28.tsp",   "solution_file": "composite1_28.solution",   "city_count": 28, "type": "Composite", "max_fes": 1200000},
+    "MSTSP14": {"file": "composite2_34.tsp",   "solution_file": "composite2_34.solution",   "city_count": 34, "type": "Composite", "max_fes": 1200000},
+    "MSTSP15": {"file": "composite3_22.tsp",   "solution_file": "composite3_22.solution",   "city_count": 22, "type": "Composite", "max_fes": 1200000},
+    "MSTSP16": {"file": "composite4_33.tsp",   "solution_file": "composite4_33.solution",   "city_count": 33, "type": "Composite", "max_fes": 1200000},
+    "MSTSP17": {"file": "composite5_35.tsp",   "solution_file": "composite5_35.solution",   "city_count": 35, "type": "Composite", "max_fes": 1200000},
+    "MSTSP18": {"file": "composite6_39.tsp",   "solution_file": "composite6_39.solution",   "city_count": 39, "type": "Composite", "max_fes": 1200000},
+    "MSTSP19": {"file": "composite7_42.tsp",   "solution_file": "composite7_42.solution",   "city_count": 42, "type": "Composite", "max_fes": 1200000},
+    "MSTSP20": {"file": "composite8_45.tsp",   "solution_file": "composite8_45.solution",   "city_count": 45, "type": "Composite", "max_fes": 1200000},
+    "MSTSP21": {"file": "composite9_48.tsp",   "solution_file": "composite9_48.solution",   "city_count": 48, "type": "Composite", "max_fes": 1200000},
+    "MSTSP22": {"file": "composite10_55.tsp",  "solution_file": "composite10_55.solution",  "city_count": 55, "type": "Composite", "max_fes": 1200000},
+    "MSTSP23": {"file": "composite11_59.tsp",  "solution_file": "composite11_59.solution",  "city_count": 59, "type": "Composite", "max_fes": 1200000},
+    "MSTSP24": {"file": "composite12_60.tsp",  "solution_file": "composite12_60.solution",  "city_count": 60, "type": "Composite", "max_fes": 1200000},
+    "MSTSP25": {"file": "composite13_66.tsp",  "solution_file": "composite13_66.solution",  "city_count": 66, "type": "Composite", "max_fes": 1200000}
+  }
+}

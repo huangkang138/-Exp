@@ -1,0 +1,1 @@
+composite10_55 run 1: best=10442, best_solutions=1, candidate_routes=2, output=D:\Project\球粒计算\GB-MACO_python\reproduction\results\raw\MSTSP22\run_001\program_output\composite10_55_RUN_0.alg_solution
