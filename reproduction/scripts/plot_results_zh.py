@@ -97,7 +97,8 @@ def plot_metric(
         label="本次复现结果",
         zorder=3,
     )
-    ax.set_ylim(max(0.0, float(data[value_column].min()) - 0.01), 1.002)
+    # 与英文图保持完全相同的纵轴范围，只翻译文字，不放大或压缩数据差异。
+    ax.set_ylim(0, 1.05)
     ax.legend(handles=[line, *type_handles], loc="best")
     finish(ax, data["instance"].tolist(), destination, y_label=y_label, title=title, explanation=explanation)
 
@@ -129,6 +130,7 @@ def plot_bar(
     title: str,
     explanation: str,
     colors: list[str] | str = LINE_COLOR,
+    zero_line: bool = False,
 ) -> None:
     data = ordered(data.dropna(subset=[value]).copy())
     figure, ax = plt.subplots(figsize=(12, 5.5))
@@ -136,6 +138,8 @@ def plot_bar(
     type_handles = shade_types(ax, data["type"].tolist())
     ax.bar(positions, data[value], color=colors, width=0.68, zorder=2)
     ax.scatter(positions, data[value], color=colors, s=24, zorder=3)
+    if zero_line:
+        ax.axhline(0, color="black", linewidth=1)
     ax.legend(handles=type_handles, loc="best")
     finish(ax, data["instance"].tolist(), destination, y_label=y_label, title=title, explanation=explanation)
 
@@ -150,6 +154,7 @@ def main() -> int:
     paper["paper_fbeta"] = pd.to_numeric(paper["paper_fbeta"], errors="coerce")
     merged = summary.merge(paper[["instance", "paper_fbeta"]], on="instance", how="left")
     figures = result_root(config) / "figures"
+    figures.mkdir(parents=True, exist_ok=True)
 
     plot_metric(
         summary, "Fbeta_mean", "Fbeta_std", figures / "fbeta_reproduced_zh.png",
@@ -166,6 +171,7 @@ def main() -> int:
         y_label="Fβ 差值", title="本次复现 Fβ − 论文 Fβ",
         explanation="0 表示完全一致；负值表示本次结果低于论文",
         colors=delta_colors,
+        zero_line=True,
     )
 
     plot_metric(

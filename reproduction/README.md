@@ -2,6 +2,8 @@
 
 本目录为 `GB-MACO_python` 的独立实验辅助层。它不修改 `gb_maco/` 中的粒球划分、蚁群搜索、多信息素、分组、2-opt 或候选解维护逻辑。
 
+如果不清楚随机种子、运行轮数、MaxFes、蚂蚁数量或 α/β/ρ 的作用，请先阅读 [`实验配置与参数说明.md`](实验配置与参数说明.md)。
+
 ## 目录和文件分别做什么
 
 | 文件 / 目录 | 作用 | 什么时候使用 |
@@ -13,7 +15,9 @@
 | `scripts/run_batch.py` | 顺序运行多个/全部实例，支持断点续跑、失败继续和批次汇总 | 正式执行 25×30 实验时使用 |
 | `scripts/parse_results.py` | 把分散的 metadata、日志和 `.alg_solution` 解析成统一的 `all_runs.csv` | 算法运行完成后第一步执行 |
 | `scripts/calculate_metrics.py` | 用 `.solution` ground truth 计算 Fβ、DI，并统计均值、标准差、最好/最差结果 | 解析完成后执行 |
-| `scripts/plot_results.py` | 根据统计 CSV 和论文结果自动生成当前能生成的全部图片 | 指标统计完成后执行 |
+| `scripts/plot_results.py` | 生成英文结果图的旧入口 | 当前只需要中文图时不要执行 |
+| `scripts/plot_results_zh.py` | 根据统计 CSV 生成中文结果图 | 需要重新生成中文图片时执行 |
+| `实验配置与参数说明.md` | 用通俗语言解释随机种子、运行轮数和主要算法参数 | 不清楚实验配置或准备撰写报告时阅读 |
 | `paper_notes.md` | 整理论文公式、参数、Table 2 数据，以及论文与 Python 实现的差异 | 查公式、解释结果或继续复现时阅读 |
 | `requirements.txt` | 仅列出绘图工具需要的 pandas 和 matplotlib | 新环境第一次运行前安装 |
 | `results/raw/` | 每次 run 的原始 stdout、stderr、metadata 和算法输出 | 保留原始证据，不手工改结果 |
@@ -132,7 +136,7 @@ python reproduction/scripts/run_batch.py --instances MSTSP1 MSTSP2 MSTSP3 --runs
 ```powershell
 python reproduction/scripts/parse_results.py
 python reproduction/scripts/calculate_metrics.py
-python reproduction/scripts/plot_results.py
+python reproduction/scripts/plot_results_zh.py
 ```
 
 ## 6. 结果结构
@@ -163,14 +167,13 @@ reproduction/results/
 
 ## 8. 绘图
 
-`plot_results.py` 使用统一英文标题、200+ dpi、无 GUI 后端并自动 `tight_layout`。数据存在时生成：
+`plot_results_zh.py` 使用中文标题和指标说明、200+ dpi、无 GUI 后端并自动 `tight_layout`。数据存在时生成：
 
-- `fbeta_reproduced.png`
-- `fbeta_paper_vs_reproduced.png`
-- `fbeta_difference.png`
-- `di_reproduced.png`
-- `di_paper_vs_reproduced.png`（当前因 paper_di 缺失而跳过）
-- `runtime_by_instance.png`
-- `reproduction_error_overview.png`
+- `fbeta_reproduced_zh.png`
+- `fbeta_paper_vs_reproduced_zh.png`
+- `fbeta_difference_zh.png`
+- `di_reproduced_zh.png`
+- `runtime_by_instance_zh.png`
+- `reproduction_error_overview_zh.png`
 
 只有一个实例时也能生成单实例验证图；缺失数据对应的图会提示并跳过，不会导致整批绘图失败。
