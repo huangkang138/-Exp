@@ -1,0 +1,16 @@
+{
+  "dataset": "simple1_9.tsp",
+  "seed": 42,
+  "epochs": 2000,
+  "eval_interval": 50,
+  "initial_eval_length": 806.0,
+  "final_eval_length": 680.0,
+  "best_eval_length": 680.0,
+  "final_train_mean_length": 680.2222290039062,
+  "final_train_best_length": 680.0,
+  "total_decisions": 144000,
+  "total_fallback_count": 0,
+  "overall_fallback_rate": 0.0,
+  "average_candidate_size": 4.5,
+  "fallback_by_remaining_city_count": {}
+}
