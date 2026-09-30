@@ -77,3 +77,38 @@ def city_to_ball_mapping(
     return mapping
 
 
+def get_candidate_cities(
+    current_city: int,
+    visited: set[int],
+    mapping: list[int],
+    balls: list[GranularBall],
+    ball_adjacency: dict[int, set[int]],
+    city_count: int,
+) -> list[int]:
+    """返回当前球及直接邻球内仍未访问的城市编号。
+
+    先看当前城市所在的球，再看与该球直接相连的球。
+    visited 是已走过的城市编号集合，例如 {0, 3}。
+    如果这些球都没有未访问城市，就返回所有尚未访问的城市。
+    返回的编号会去重并从小到大排列；这里只生成候选，不选下一步。
+    """
+    # mapping 用城市编号查球编号。例如 mapping[0] == 2 表示城市 0 在球 2。
+    current_ball = mapping[current_city]
+    # 把当前球与它的邻球合在一起。例如 {2} | {1, 3} 得到 {1, 2, 3}。
+    candidate_balls = {current_ball} | ball_adjacency[current_ball]
+    # 下面相当于两层循环：先逐个看候选球，再逐个看球内城市。
+    # point.index 是城市编号；已访问的跳过，集合会自动去重。
+    candidates = {
+        point.index
+        for ball_id in candidate_balls
+        for point in balls[ball_id].data
+        if point.index not in visited
+    }
+    # 这些球里有未访问城市，就只返回这些城市；排序使输出顺序固定。
+    if candidates:
+        return sorted(candidates)
+
+    # 当前球和邻球里都没有可选城市时，返回全部未访问城市，避免路线中断。
+    # range(city_count) 是全部城市编号：0、1、...、city_count-1。
+    return [city for city in range(city_count) if city not in visited]
+

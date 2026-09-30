@@ -180,6 +180,31 @@ class _UnionFind:
             self.size[root2] += self.size[root1]
 
 
+def _is_ball_connected(
+    first: GranularBall, second: GranularBall, c_count: int, gap: float
+) -> bool:
+    """按原粒球算法判断两个球是否直接相连。
+
+    gap 是两个球心的距离。原算法也是用下面的条件决定是否合并这两个球。
+    gbc() 使用 c_count=1，此时允许的最大球心距离为：
+    两球半径相加，再加上“较小半径 / (较小的 hardlapcount + 1)”。
+    """
+    # c_count=1 时用较小半径；其他值沿用原算法，改用较大半径。
+    larger = max(first.radius, second.radius)
+    smaller = min(first.radius, second.radius)
+    # hardlapcount 是前一轮重叠检查记录的数值；加 1 保证分母不为零。
+    denominator = min(first.hardlapcount, second.hardlapcount) + 1
+    extra = (smaller if c_count == 1 else larger) / denominator
+    # 两球都未被排除、距离在范围内、且各有超过 2 个城市时才返回 True。
+    return (
+        first.out != 1
+        and second.out != 1
+        and gap <= first.radius + second.radius + extra
+        and first.num > 2
+        and second.num > 2
+    )
+
+
 def connect_ball_overlap(
     ball_data: list[list[Point2D]], c_count: int = 1
 ) -> list[GranularBall]:
@@ -225,11 +250,10 @@ def connect_ball_overlap(
             if second.out == 1:
                 continue
             larger = max(first.radius, second.radius)
-            smaller = min(first.radius, second.radius)
             gap = distance_2d(first.center, second.center)
-            denominator = min(first.hardlapcount, second.hardlapcount) + 1
-            extra = (smaller if c_count == 1 else larger) / denominator
-            if gap <= first.radius + second.radius + extra and first.num > 2 and second.num > 2:
+            # 这里合并的球对，就是后面建立邻接表时要记录的球对。
+            # 下面的 softlapcount 只是另一种重叠记录，不算直接连接。
+            if _is_ball_connected(first, second, c_count, gap):
                 first.flag = second.flag = 1
                 groups.unite(i, j)
             if gap <= first.radius + second.radius + larger:
@@ -264,6 +288,38 @@ def connect_ball_overlap(
                     ball.label = candidate.label
                     ball.flag = 2
     return balls
+
+
+def build_ball_adjacency(
+    balls: list[GranularBall], c_count: int = 1
+) -> dict[int, set[int]]:
+    """找出每个球直接连接的其他球。
+
+    balls 是 [球0, 球1, ...]，列表下标就是球编号。
+    返回 {球编号: {相邻球编号, ...}}；没有邻球时返回空集合。
+    只记录两个球之间直接满足连接条件的情况。
+    例如球 0 连球 1、球 1 连球 2，不代表球 0 直接连球 2。
+    c_count 默认值与 gbc() 当前使用的值相同。
+    """
+    # 每个球先对应一个空集合；没有邻球的球也会留在结果里。
+    adjacency: dict[int, set[int]] = {index: set() for index in range(len(balls))}
+    # 依次取球 i，再检查它后面的球 j。
+    for i, first in enumerate(balls):
+        # 原连接流程会跳过 out==1 的球，这里保持相同规则。
+        if first.out == 1:
+            continue
+        # 从 i+1 开始，避免拿球和自己比较，也避免同一对球检查两次。
+        for j in range(i + 1, len(balls)):
+            second = balls[j]
+            if second.out == 1:
+                continue
+            # 先算两个球心的距离，再用原连接条件判断。
+            gap = distance_2d(first.center, second.center)
+            if _is_ball_connected(first, second, c_count, gap):
+                # 如果 i 连 j，就同时记下“i 的邻球有 j”和“j 的邻球有 i”。
+                adjacency[i].add(j)
+                adjacency[j].add(i)
+    return adjacency
 
 
 def gbc(data: list[Point2D]) -> list[GranularBall]:
