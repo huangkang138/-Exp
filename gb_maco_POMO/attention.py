@@ -33,6 +33,12 @@ def build_city_features(
     ):
         raise ValueError("mapping 必须为每个城市指定有效的粒球下标")
 
+    """
+        例如取得城市 i 的球，就是 balls[mapping[i]]。
+        三组数归一化后，用 torch.cat(..., dim=-1) 横向拼起来：
+        城市 i：[城市x, 城市y, 球心x, 球心y, 半径]
+    """
+
     city_xy = torch.tensor([[city.x, city.y] for city in cities], dtype=torch.float32)
     ball_xy = torch.tensor(
         [[balls[mapping[city.number]].center.x, balls[mapping[city.number]].center.y]
@@ -50,6 +56,7 @@ def build_city_features(
         ((city_xy - origin) / scale, (ball_xy - origin) / scale, radius / scale),
         dim=-1,
     )
+
     return features.unsqueeze(0)  # 当前一次输入一个算例，仍保留 batch 维。
 
 
@@ -150,7 +157,13 @@ class CityEncoder(nn.Module):
         """
         if city_features.ndim != 3 or city_features.shape[-1] != 5:
             raise ValueError("city_features 形状必须是 [B, N, 5]")
+        """
+           self.embedding 是 nn.Linear(5,128)：
+           
+           每个城市原来有 5 个数，经过可训练的计算后变成 128 个数。因此 [1,9,5] → [1,9,128]。
+        """
         embedded_nodes = self.embedding(city_features)
+
         encoded_nodes = embedded_nodes
         for layer in self.layers:
             encoded_nodes = layer(encoded_nodes)

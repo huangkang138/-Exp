@@ -118,8 +118,9 @@ def rollout(
     ).to(device)
     # Encoder 只运行一次；后续 N-1 个决策步骤共享同一份 encoded_nodes。
     embedded_nodes, encoded_nodes = policy.encode(features)
+
     # 第 p 条路线从城市 p 开始；第一步时当前位置也正是它的起点。
-    first_cities = torch.arange(city_count, device=device).unsqueeze(0)  # [1,N]
+    first_cities = torch.arange(city_count, device=device).unsqueeze(0)  # [1,N](1是第一个城市)
     current_cities = first_cities.clone()
 
     # 每个 POMO 下标拥有自己的起点、已访问集合和路线；参数仍由同一 Policy 共享。
@@ -127,6 +128,14 @@ def rollout(
     visited = [{start} for start in range(city_count)]
     selected_log_probs: list[Tensor] = []
     first_step: StepRecord | None = None
+    """
+    执行后：
+    路线0：route = [0]，visited = {0}，当前城市 = 0
+    路线1：route = [1]，visited = {1}，当前城市 = 1
+    ...
+    路线8：route = [8]，visited = {8}，当前城市 = 8
+    [[start] ...] 创建的是列表的列表，[{start} ...] 创建的是集合的列表
+    """
 
     # 起点已经访问过，所以还要选择 N-1 次；每一轮每条路线各选一个城市。
     candidate_decisions: list[CandidateDecision] = []
@@ -137,7 +146,8 @@ def rollout(
         )
         candidates_per_route: list[list[int]] = []
         for pomo_id in range(city_count):
-            current_city = routes[pomo_id][-1]
+            current_city = routes[pomo_id][-1]#是这条路线的最后一个城市，也就是当前位
+
             # 现有函数按“当前球 + 直接邻球”返回未访问城市；局部为空时会 fallback。
             candidates = get_candidate_cities(
                 current_city=current_city,
@@ -207,12 +217,15 @@ def rollout(
                 selected_city=chosen[0],
             )
         # 每条路线只更新自己的 route 和 visited，不影响其他 POMO 路线。
+
         for pomo_id, city in enumerate(chosen):
             if city in visited[pomo_id] or city not in candidates_per_route[pomo_id]:
                 raise RuntimeError("Policy 选中了已访问或非候选城市")
             routes[pomo_id].append(city)
             visited[pomo_id].add(city)
         current_cities = next_cities
+        # enumerate(chosen)
+        # 同时取得“路线号”和“这条路线选中的城市”。
 
     assert first_step is not None
     for route in routes:
@@ -261,7 +274,7 @@ def train_step(
     if not torch.isfinite(loss).item():
         raise RuntimeError("Policy Gradient loss 不是有限值")
 
-    # 保存更新前的权重，只用于验证 optimizer.step() 后是否真的改变参数。
+    # 保存更新前的权重，只用于验证 optimizer.step() 后是否真的改变参数 !!!
     before = [parameter.detach().clone() for parameter in policy.parameters()]
     optimizer.zero_grad()
     loss.backward()
