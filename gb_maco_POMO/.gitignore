@@ -1,0 +1,5 @@
+# 训练产物可能很大；保留本地，不随源码提交。
+/results/
+/checkpoints/
+__pycache__/
+/Results_1_1.5 _0.3 150/
