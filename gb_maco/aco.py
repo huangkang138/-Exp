@@ -219,6 +219,7 @@ class GBMACO:
         self.best_routes: list[Route] = []
         self.key_edges: list[tuple[int, int]] = []
         self.fes = 0.0
+        self.zero_weight_fallback_count = 0  # 轮盘赌权重全为 0 时的实际回退次数。
 
     def _new_matrix(self) -> list[list[float]]:
         """初始化一张对角线为零、其他位置为 tau_0 的矩阵。
@@ -277,6 +278,7 @@ class GBMACO:
         ]
         total = sum(weights)
         if total <= 0:
+            self.zero_weight_fallback_count += 1
             return available[0]
         probability = self.selection_random.random()
         cumulative = 0.0

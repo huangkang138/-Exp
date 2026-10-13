@@ -61,6 +61,18 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(key, canonical_cycle([0, 3, 2, 1]))
         self.assertNotEqual(key, canonical_cycle([0, 2, 1, 3]))
 
+    def test_mixed_contains_greedy_and_same_seed_samples(self):
+        policy = POMOPolicy(candidate_mode="soft")
+        greedy = search_routes(policy, self.problem, inference_mode="argmax", seed=7)
+        sampled = search_routes(policy, self.problem, inference_mode="sampling",
+                                samples_per_start=2, seed=7)
+        mixed = search_routes(policy, self.problem, inference_mode="mixed",
+                              samples_per_start=2, seed=7)
+        self.assertEqual(mixed.routes, greedy.routes + sampled.routes)
+        self.assertEqual(mixed.generated_count, 30)
+        self.assertEqual(mixed.unique_count, len({canonical_cycle(r) for r in mixed.routes}))
+        self.assertEqual(mixed.best_length, min(greedy.best_length, sampled.best_length))
+
     def test_sampling_is_legal_reproducible_and_budgeted(self):
         torch.set_num_threads(1)
         policy = POMOPolicy(candidate_mode="none")

@@ -319,6 +319,7 @@ class SearchResult:
     elapsed_seconds: float
     routes: list[list[int]]
     lengths: list[int]
+    fallback_count: int  # 仅统计 hard 模式实际触发的候选集 fallback。
 
 
 @torch.no_grad()
@@ -326,8 +327,8 @@ def search_routes(
     policy: POMOPolicy, prepared: PreparedTSP, *, inference_mode: str = "argmax",
     samples_per_start: int = 8, seed: int = 42, quality_threshold: float = 0.05,
 ) -> SearchResult:
-    """每个起点独立生成 K 条路线，按实际闭环距离筛选；不读取最优解。"""
-    if inference_mode not in ("argmax", "sampling") or samples_per_start < 1:
+    """按推理模式生成路线并统一去重筛选；mixed 每起点含 1 条贪心和 K 条采样。"""
+    if inference_mode not in ("argmax", "sampling", "mixed") or samples_per_start < 1:
         raise ValueError("推理模式或每起点采样次数无效")
     if not isfinite(quality_threshold) or quality_threshold < 0:
         raise ValueError("quality_threshold 必须是非负有限数")
@@ -338,14 +339,20 @@ def search_routes(
         torch.cuda.synchronize(device)
     started = time.perf_counter()
     routes: list[list[int]] = []
+    fallback_count = 0
     with torch.random.fork_rng(devices=devices):
         torch.manual_seed(seed)
         if device.type == "cuda":
             torch.cuda.manual_seed_all(seed)
-        repetitions = samples_per_start if inference_mode == "sampling" else 1
-        for _ in range(repetitions):
-            outcome = rollout(policy, prepared, sample_actions=inference_mode == "sampling")
+        # 贪心不消耗随机数；mixed 的采样序列与同 seed 的 sampling 模式一致。
+        action_modes = ([False] if inference_mode in ("argmax", "mixed") else [])
+        action_modes += [True] * samples_per_start if inference_mode in ("sampling", "mixed") else []
+        for sample_actions in action_modes:
+            outcome = rollout(policy, prepared, sample_actions=sample_actions)
             routes.extend(outcome.routes)
+            # soft/none 始终保留所有未访问城市，不会触发 hard 的候选集 fallback。
+            if policy.candidate_mode == "hard":
+                fallback_count += sum(decision.fallback_used for decision in outcome.candidate_decisions)
     lengths = [route_length(route, prepared.distance_matrix) for route in routes]
     city_count = len(prepared.cities)
     if any(len(route) != city_count or set(route) != set(range(city_count)) for route in routes):
@@ -359,7 +366,7 @@ def search_routes(
     return SearchResult(
         best_routes[0], best, best_routes, len(routes), len(unique),
         1 - len(unique) / len(routes), quality, quality / len(unique),
-        time.perf_counter() - started, routes, lengths,
+        time.perf_counter() - started, routes, lengths, fallback_count,
     )
 
 

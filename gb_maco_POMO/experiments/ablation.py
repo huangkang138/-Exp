@@ -1,4 +1,4 @@
-"""五组最终验证；.solution 仅在路线生成结束后用于评价。"""
+"""候选机制与搜索策略验证；.solution 仅在路线生成结束后用于评价。"""
 
 from __future__ import annotations
 
@@ -23,13 +23,15 @@ from .train_loop import select_device
 GROUPS = {
     "A": ("hard", "argmax"), "B": ("soft", "argmax"),
     "C": ("hard", "sampling"), "D": ("soft", "sampling"),
-    "E": ("none", "sampling"),
+    "E": ("none", "sampling"), "F": ("soft", "mixed"),
 }
 FIELDS = (
     "group", "instance", "city_count", "best_length", "optimal_length", "gap_pct",
     "hit_optimum", "fbeta", "di", "generated_routes", "unique_routes",
     "duplicate_rate", "high_quality_routes", "high_quality_rate", "seconds",
     "starts", "samples_per_start", "decoder_decisions", "checkpoint_sha256",
+    "best_solution_count", "optimal_route_hits", "precision", "recall",
+    "fallback_count", "truth_solution_count",
 )
 
 
@@ -75,6 +77,9 @@ def run_group(
             raise ValueError(f"{name} 路线短于参考最优，检查距离定义")
         from ..pomo import canonical_cycle
         returned = {canonical_cycle(route) for route in search.best_routes}
+        hits = len(returned & truth)
+        precision = hits / len(returned)
+        recall = hits / len(truth)
         f_score = fbeta(returned, truth)
         di_score = diversity_indicator(returned, truth)
         if f_score is None or di_score is None:
@@ -91,9 +96,12 @@ def run_group(
             "high_quality_routes": search.high_quality_count,
             "high_quality_rate": search.high_quality_rate,
             "seconds": search.elapsed_seconds, "starts": count,
-            "samples_per_start": samples_per_start if inference_mode == "sampling" else 1,
+            "samples_per_start": samples_per_start if inference_mode in ("sampling", "mixed") else 1,
             "decoder_decisions": search.generated_count * (count - 1),
             "checkpoint_sha256": checkpoint_hash,
+            "best_solution_count": len(returned), "optimal_route_hits": hits,
+            "precision": precision, "recall": recall,
+            "fallback_count": search.fallback_count, "truth_solution_count": len(truth),
         })
         print(f"{group} {name}: length={search.best_length}, unique={search.unique_count}/"
               f"{search.generated_count}, seconds={search.elapsed_seconds:.2f}", flush=True)
@@ -106,7 +114,7 @@ def run_group(
         "group": group, "candidate_mode": expected_mode, "inference_mode": inference_mode,
         "checkpoint": str(checkpoint.resolve()), "checkpoint_sha256": checkpoint_hash,
         "checkpoint_epoch": state["epoch"], "run_id": state["run_id"],
-        "seed": seed, "samples_per_start": samples_per_start if inference_mode == "sampling" else 1,
+        "seed": seed, "samples_per_start": samples_per_start if inference_mode in ("sampling", "mixed") else 1,
         "quality_threshold": quality_threshold, "device": str(device),
         "instances": len(rows), "mean_gap_pct": sum(float(r["gap_pct"]) for r in rows) / len(rows),
         "optimal_hits": sum(int(r["hit_optimum"]) for r in rows),
@@ -116,6 +124,7 @@ def run_group(
         "total_unique_routes": sum(int(r["unique_routes"]) for r in rows),
         "total_high_quality_routes": sum(int(r["high_quality_routes"]) for r in rows),
         "total_decoder_decisions": sum(int(r["decoder_decisions"]) for r in rows),
+        "total_fallback_count": sum(int(r["fallback_count"]) for r in rows),
         "baseline_csv": str(baseline_csv.resolve()), "paper_csv": str(paper_csv.resolve()),
     }
     summary["overall_duplicate_rate"] = 1 - summary["total_unique_routes"] / summary["total_generated_routes"]
@@ -137,7 +146,7 @@ def run_group(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="POMO 五组候选机制与搜索方式对照")
+    parser = argparse.ArgumentParser(description="POMO 候选机制与搜索方式对照")
     parser.add_argument("--group", choices=(*GROUPS, "all"), default="all")
     parser.add_argument("--hard-checkpoint", type=Path)
     parser.add_argument("--soft-checkpoint", type=Path)
@@ -191,7 +200,8 @@ def main(argv: list[str] | None = None) -> None:
                   args.samples_per_start, args.seed, args.quality_threshold,
                   args.benchmark_dir, args.baseline_csv, args.paper_csv)
         summaries[group] = json.loads((root / group / "summary.json").read_text(encoding="utf-8"))
-    pairs = (("A", "B"), ("A", "C"), ("B", "D"), ("C", "D"), ("D", "E"))
+    pairs = (("A", "B"), ("A", "C"), ("B", "D"), ("C", "D"), ("D", "E"),
+             ("B", "F"), ("D", "F"))
     comparisons = {
         f"{left}_to_{right}": {
             metric + "_delta": float(summaries[right][metric]) - float(summaries[left][metric])

@@ -1,7 +1,7 @@
 # 修改这里后直接运行：python -m gb_maco_POMO.experiments.train
 # 当前轮数用于检查正式训练流程；确定耗时后再设置正式轮数。
 [training]
-epochs = 15 #50
+epochs = 35 #50
 batch_size = 64             # 一次参数更新覆盖的实例数，同一批城市数 N 相同
 micro_batch_size = 8        # 8 GB 显存一次实际处理的实例数；梯度累积到 batch_size
 learning_rate = 0.0001
@@ -21,7 +21,7 @@ batch_size = 64
 
 [data]
 # 相对本配置文件所在的 experiments/ 目录。
-root = "../../benachmark_Train_MATSP"
+root = "../../benachmark_Train_MATSP_500"
 train_dir = "train"
 validation_dir = "validation"
 
