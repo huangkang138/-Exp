@@ -1,0 +1,53 @@
+﻿==============================================================================
+  怎么跑（这个文件夹里的东西是完整能跑的）
+==============================================================================
+
+【环境】
+  只需要 Python 3.10 以上，不需要安装任何第三方包 —— 这份算法只用标准库。
+  检查有没有装：在命令行敲
+
+      python -V
+
+  没装的话去 python.org 下载安装，安装时记得勾选 Add python.exe to PATH。
+
+【跑起来】
+  进入本文件夹里的 src 目录，然后：
+
+      # 只跑一个算例，快速看一眼（几十秒）
+      python -m gb_maco.runner benchmark_MSTSP/composite8_45.tsp --runs 1
+
+      # 一键回到原论文配置（v1 粒球 + 不限制候选 + 只留并列最优）
+      python -m gb_maco.runner --legacy --runs 1
+
+      # 跑全部 25 个算例（每个 30 次，很慢，建议挂一夜）
+      python -m gb_maco.runner
+
+  输出写在 src/results 目录下。
+
+【可调开关】
+  --gbc v1|v3                    粒球实现（默认 v3）
+  --candidate off|soft_neighbor|hard_neighbor|hard_ball
+                                 候选城市判定（默认 soft_neighbor）
+  --candidate-rule knn|mst|gap   「临近粒球」怎么判（默认 knn）
+  --neighbor-k 1|2               knn 口径下每个球连几个邻居
+  --outside-scale 0.05           候选集外城市的权重折扣
+  --anneal-fes 0.5               折扣在前多少比例的预算里由 0 线性放开
+  --keep-tolerance 1.25          高质量路线存档门槛（1.0 = 关）
+  --queue-limit 600              存档上限
+  --polish-rotations 8           收尾精修时每条路线换几个起点各扫一遍
+  --polish-rounds 2              收尾精修最多扫几遍
+  --no-final-polish              关掉收尾精修
+  --no-polish-relax              精修时保留「关键边保护」（默认关掉）
+  --legacy                       一键回到原论文配置
+
+【目录结构】
+  src/gb_maco/            算法本体
+                          改动过的是：aco.py、candidate.py、runner.py
+                          粒球换成 granular_ball_v3.py
+  src/benchmark_MSTSP/    25 个标准算例（.tsp 是题目，.solution 是标准答案）
+  src/results/            跑出来的结果写在这里（首次运行会自动创建）
+
+【注意】
+  所有新增功能默认是关闭的，用 --legacy 可以得到与改动前完全一致的行为，
+  原来复现论文的结果不会被这次改动影响。
+==============================================================================

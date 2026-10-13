@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from math import sqrt
+from math import isfinite, sqrt
 
 import torch
 from torch import Tensor, nn
 
 from .granular_ball import GranularBall
 from .tsp import City
+from .tsp import get_candidate_cities
 
 
 def build_city_features(
@@ -220,6 +221,7 @@ class POMODecoder(nn.Module):
         first_cities: Tensor,
         current_cities: Tensor,
         candidate_mask: Tensor,
+        candidate_bias: Tensor | None = None,
     ) -> Tensor:
         """为每条 POMO 路线计算一次下一城市的概率。
 
@@ -240,6 +242,9 @@ class POMODecoder(nn.Module):
             raise ValueError("candidate_mask 形状必须是 [B, P, N] 且类型为 bool")
         if not candidate_mask.any(dim=-1).all().item():
             raise ValueError("每条路线至少需要一个候选城市")
+        if candidate_bias is not None and (candidate_bias.shape != candidate_mask.shape or
+                                           not torch.isfinite(candidate_bias).all().item()):
+            raise ValueError("candidate_bias 必须与 mask 同形且为有限值")
         for city_ids in (first_cities, current_cities):
             if ((city_ids < 0) | (city_ids >= city_count)).any().item():
                 raise ValueError("起点或当前城市编号超出范围")
@@ -262,6 +267,8 @@ class POMODecoder(nn.Module):
         ) / sqrt(embedding_dim)
         # 限制分数的绝对值，再屏蔽非候选城市，最后只在候选城市间分配概率。
         scores = self.logit_clip * torch.tanh(scores)
+        if candidate_bias is not None:
+            scores = scores + candidate_bias
         scores = scores.masked_fill(~candidate_mask, float("-inf"))
         return torch.softmax(scores, dim=-1)
 
@@ -277,11 +284,23 @@ class POMOPolicy(nn.Module):
         embedding_dim: int = 128,
         head_num: int = 8,
         encoder_layer_num: int = 3,
+        candidate_mode: str = "hard",
+        same_ball_bias: float = 2.0,
+        adjacent_ball_bias: float = 1.0,
     ) -> None:
         """创建城市 Encoder 和路线 Decoder，默认 D=128、8 个头、3 层 Encoder。"""
         super().__init__()
         self.encoder = CityEncoder(5, embedding_dim, head_num, encoder_layer_num)
         self.decoder = POMODecoder(embedding_dim, head_num)
+        if candidate_mode not in ("hard", "soft", "none"):
+            raise ValueError("candidate_mode 必须是 hard、soft 或 none")
+        if not all(isfinite(v) for v in (same_ball_bias, adjacent_ball_bias)) or not (
+            0 <= adjacent_ball_bias <= same_ball_bias <= self.decoder.logit_clip
+        ):
+            raise ValueError("偏好必须满足 0 <= adjacent <= same <= logit_clip")
+        self.candidate_mode = candidate_mode
+        self.same_ball_bias = same_ball_bias
+        self.adjacent_ball_bias = adjacent_ball_bias
 
     def encode(self, city_features: Tensor) -> tuple[Tensor, Tensor]:
         """路线开始前调用一次，得到初始 embedding 与可复用的 encoded_nodes。"""
@@ -293,8 +312,33 @@ class POMOPolicy(nn.Module):
         first_cities: Tensor,
         current_cities: Tensor,
         candidate_mask: Tensor,
+        candidate_bias: Tensor | None = None,
     ) -> Tensor:
         """在某一步调用 Decoder，用各路线状态和候选 Mask 得到下一城市概率。"""
         return self.decoder(
-            encoded_nodes, first_cities, current_cities, candidate_mask
+            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias
         )
+
+
+def candidate_guidance(
+    current_city: int, visited: set[int], mapping: list[int], balls: list[GranularBall],
+    adjacency: dict[int, set[int]], city_count: int, policy: POMOPolicy,
+) -> tuple[list[int], list[float]]:
+    """统一训练与推理的动作域；soft/none 只硬屏蔽已访问城市。"""
+    if policy.candidate_mode == "hard":
+        candidates = get_candidate_cities(
+            current_city, visited, mapping, balls, adjacency, city_count
+        )
+    else:
+        candidates = [city for city in range(city_count) if city not in visited]
+    bias = [0.0] * city_count
+    if policy.candidate_mode == "soft":
+        current_ball = mapping[current_city]
+        neighbors = adjacency[current_ball]
+        for city in candidates:
+            ball = mapping[city]
+            if ball == current_ball:
+                bias[city] = policy.same_ball_bias
+            elif ball in neighbors:
+                bias[city] = policy.adjacent_ball_bias
+    return candidates, bias

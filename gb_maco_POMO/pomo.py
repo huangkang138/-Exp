@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
 
 import torch
@@ -20,9 +22,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     __package__ = "gb_maco_POMO"
 
-from .attention import POMOPolicy, build_city_features
+from .attention import POMOPolicy, build_city_features, candidate_guidance
 from .runner import PreparedTSP, prepare_tsp
-from .tsp import get_candidate_cities
 
 
 @dataclass
@@ -144,18 +145,15 @@ def rollout(
         candidate_mask = torch.zeros(
             (1, city_count, city_count), dtype=torch.bool, device=device
         )
+        candidate_bias = torch.zeros((1, city_count, city_count), device=device)
         candidates_per_route: list[list[int]] = []
         for pomo_id in range(city_count):
             current_city = routes[pomo_id][-1]#是这条路线的最后一个城市，也就是当前位
 
             # 现有函数按“当前球 + 直接邻球”返回未访问城市；局部为空时会 fallback。
-            candidates = get_candidate_cities(
-                current_city=current_city,
-                visited=visited[pomo_id],
-                mapping=prepared.city_to_ball,
-                balls=prepared.granular_balls,
-                ball_adjacency=prepared.ball_adjacency,
-                city_count=city_count,
+            candidates, bias = candidate_guidance(
+                current_city, visited[pomo_id], prepared.city_to_ball,
+                prepared.granular_balls, prepared.ball_adjacency, city_count, policy,
             )
             if not candidates or visited[pomo_id].intersection(candidates):
                 raise RuntimeError("候选城市为空，或包含已访问城市")
@@ -179,9 +177,10 @@ def rollout(
             )
             candidates_per_route.append(candidates)
             candidate_mask[0, pomo_id, candidates] = True
+            candidate_bias[0, pomo_id] = torch.tensor(bias, device=device)
 
         probabilities = policy(
-            encoded_nodes, first_cities, current_cities, candidate_mask
+            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias
         )  # [1,N,N]，第二维是路线，第三维是城市。
         # 对每条路线的每一步都检查 Mask 和概率，而不只检查最终路线。
         if not torch.isfinite(probabilities).all().item():
@@ -294,6 +293,74 @@ def evaluate(policy: POMOPolicy, prepared: PreparedTSP) -> POMORollout:
     policy.eval()
     with torch.no_grad():
         return rollout(policy, prepared, sample_actions=False)
+
+
+def canonical_cycle(route: list[int]) -> tuple[int, ...]:
+    """对称 TSP 的旋转和逆向闭环共用同一个键。"""
+    if not route or len(set(route)) != len(route):
+        raise ValueError("路线必须是无重复城市的非空序列")
+    minimum = min(route)
+    index = route.index(minimum)
+    forward = route[index:] + route[:index]
+    reverse = [forward[0]] + list(reversed(forward[1:]))
+    return min(tuple(forward), tuple(reverse))
+
+
+@dataclass
+class SearchResult:
+    best_route: list[int]
+    best_length: int
+    best_routes: list[list[int]]
+    generated_count: int
+    unique_count: int
+    duplicate_rate: float
+    high_quality_count: int
+    high_quality_rate: float
+    elapsed_seconds: float
+    routes: list[list[int]]
+    lengths: list[int]
+
+
+@torch.no_grad()
+def search_routes(
+    policy: POMOPolicy, prepared: PreparedTSP, *, inference_mode: str = "argmax",
+    samples_per_start: int = 8, seed: int = 42, quality_threshold: float = 0.05,
+) -> SearchResult:
+    """每个起点独立生成 K 条路线，按实际闭环距离筛选；不读取最优解。"""
+    if inference_mode not in ("argmax", "sampling") or samples_per_start < 1:
+        raise ValueError("推理模式或每起点采样次数无效")
+    if not isfinite(quality_threshold) or quality_threshold < 0:
+        raise ValueError("quality_threshold 必须是非负有限数")
+    policy.eval()
+    device = next(policy.parameters()).device
+    devices = [device.index or 0] if device.type == "cuda" else []
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    started = time.perf_counter()
+    routes: list[list[int]] = []
+    with torch.random.fork_rng(devices=devices):
+        torch.manual_seed(seed)
+        if device.type == "cuda":
+            torch.cuda.manual_seed_all(seed)
+        repetitions = samples_per_start if inference_mode == "sampling" else 1
+        for _ in range(repetitions):
+            outcome = rollout(policy, prepared, sample_actions=inference_mode == "sampling")
+            routes.extend(outcome.routes)
+    lengths = [route_length(route, prepared.distance_matrix) for route in routes]
+    city_count = len(prepared.cities)
+    if any(len(route) != city_count or set(route) != set(range(city_count)) for route in routes):
+        raise RuntimeError("生成了非法路线")
+    unique = {canonical_cycle(route): (route, length) for route, length in zip(routes, lengths)}
+    best = min(lengths)
+    best_routes = [route for route, length in unique.values() if length == best]
+    quality = sum(length <= best * (1 + quality_threshold) for _, length in unique.values())
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    return SearchResult(
+        best_routes[0], best, best_routes, len(routes), len(unique),
+        1 - len(unique) / len(routes), quality, quality / len(unique),
+        time.perf_counter() - started, routes, lengths,
+    )
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -56,6 +56,9 @@ def main(argv: list[str] | None = None) -> None:
         parser.error(f"没有找到 TSP 文件：{args.data_dir}")
 
     for path in paths:
+        #读入城市后，生成粒球，再建立两张关系：
+        #- city_to_ball[城市编号]：这个城市属于哪个球。
+        #- ball_adjacency[球编号]：这个球直接连接哪些球。
         prepared = prepare_tsp(path)
         print(
             f"{path.name}: cities={len(prepared.cities)}, "

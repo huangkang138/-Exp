@@ -199,6 +199,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--embedding-dim", type=int)
     parser.add_argument("--encoder-layers", type=int)
     parser.add_argument("--num-heads", type=int)
+    parser.add_argument("--candidate-mode", choices=("hard", "soft", "none"))
+    parser.add_argument("--same-ball-bias", type=float)
+    parser.add_argument("--adjacent-ball-bias", type=float)
     parser.add_argument("--save-interval", type=int)
     parser.add_argument("--resume", type=str)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"))
@@ -230,6 +233,9 @@ def main(argv: list[str] | None = None) -> None:
         "model.embedding_dim": args.embedding_dim,
         "model.encoder_layers": args.encoder_layers,
         "model.num_heads": args.num_heads,
+        "model.candidate_mode": args.candidate_mode,
+        "model.same_ball_bias": args.same_ball_bias,
+        "model.adjacent_ball_bias": args.adjacent_ball_bias,
         "checkpoint.save_interval": args.save_interval,
         "checkpoint.resume": args.resume,
         "runtime.device": args.device,

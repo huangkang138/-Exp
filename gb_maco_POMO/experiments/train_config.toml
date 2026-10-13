@@ -1,0 +1,37 @@
+# 修改这里后直接运行：python -m gb_maco_POMO.experiments.train
+# 当前轮数用于检查正式训练流程；确定耗时后再设置正式轮数。
+[training]
+epochs = 15 #50
+batch_size = 64             # 一次参数更新覆盖的实例数，同一批城市数 N 相同
+micro_batch_size = 8        # 8 GB 显存一次实际处理的实例数；梯度累积到 batch_size
+learning_rate = 0.0001
+seed = 42
+
+[model]
+embedding_dim = 128
+encoder_layers = 3
+num_heads = 8
+candidate_mode = "soft"  # hard / soft / none；正式训练时用 --candidate-mode 覆盖
+same_ball_bias = 2.0
+adjacent_ball_bias = 1.0
+
+[validation]
+interval = 4
+batch_size = 64
+
+[data]
+# 相对本配置文件所在的 experiments/ 目录。
+root = "../../benachmark_Train_MATSP"
+train_dir = "train"
+validation_dir = "validation"
+
+[checkpoint]
+save_interval = 20
+resume = ""                # 续训时填 latest.pt 的路径，或用命令行 --resume
+
+[runtime]
+device = "cuda"             # 本机训练要求 GPU；也可临时用 --device cpu 检查
+
+[output]
+results_root = "../results"
+checkpoints_root = "../results/checkpoints"
