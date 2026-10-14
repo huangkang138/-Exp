@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 
 from ..attention import POMOPolicy, build_city_features, candidate_guidance
-from ..runner import prepare_tsp
+from ..runner import PreparedTSP, prepare_tsp
 from .data import DatasetInstance
 
 
@@ -21,6 +21,28 @@ class BatchRollout:
     fallback_count: int
     candidate_total: int
     decision_count: int
+    bias_stats: dict[str, float] | None = None
+
+
+def _ball_relation_matrices(
+    prepared: list[PreparedTSP], device: torch.device,
+) -> tuple[Tensor, Tensor]:
+    """Build [B,N,N] same/adjacent relations once per micro batch.
+
+    The first city axis is the current city, the second is the candidate.
+    Visited cities are still excluded by the existing candidate mask later.
+    """
+    mapping = torch.tensor([problem.city_to_ball for problem in prepared],
+                           dtype=torch.long, device=device)
+    same = mapping[:, :, None] == mapping[:, None, :]
+    adjacent = torch.tensor(
+        [[[candidate_ball != current_ball and
+           candidate_ball in problem.ball_adjacency[current_ball]
+           for candidate_ball in problem.city_to_ball]
+          for current_ball in problem.city_to_ball]
+         for problem in prepared], dtype=torch.bool, device=device,
+    )
+    return same, adjacent
 
 
 def rollout_batch(
@@ -51,11 +73,16 @@ def rollout_batch(
     visited = [[{start} for start in range(city_count)] for _ in range(batch_size)]
     selected_log_probs: list[Tensor] = []
     fallback_count = candidate_total = decision_count = 0
+    bias_steps: list[Tensor] = []
+    if policy.bias_mode == "learnable":
+        same_relations, adjacent_relations = _ball_relation_matrices(prepared, device)
+        relation_batch_ids = torch.arange(batch_size, device=device)[:, None]
 
     for _step in range(1, city_count):
         # CPU 上生成候选 Mask，整个 micro batch 一次送入 GPU 的 Decoder。
         mask = torch.zeros((batch_size, city_count, city_count), dtype=torch.bool)
-        bias = torch.zeros((batch_size, city_count, city_count), dtype=torch.float32)
+        bias = (torch.zeros((batch_size, city_count, city_count), dtype=torch.float32)
+                if policy.bias_mode == "fixed" else None)
         for batch_id, problem in enumerate(prepared):
             for pomo_id in range(city_count):
                 current = routes[batch_id][pomo_id][-1]
@@ -76,10 +103,21 @@ def rollout_batch(
                 candidate_total += len(candidates)
                 decision_count += 1
                 mask[batch_id, pomo_id, candidates] = True
-                bias[batch_id, pomo_id] = torch.tensor(preference)
+                if bias is not None:
+                    bias[batch_id, pomo_id] = torch.tensor(preference)
 
+        if policy.bias_mode == "learnable":
+            # Gather one precomputed relation row for every current POMO city.
+            same_mask = same_relations[relation_batch_ids, current_cities]
+            adjacent_mask = adjacent_relations[relation_batch_ids, current_cities]
+        else:
+            same_mask = adjacent_mask = None
         probabilities = policy(encoded_nodes, first_cities, current_cities,
-                               mask.to(device), bias.to(device))
+                               mask.to(device),
+                               bias.to(device) if bias is not None else None,
+                               same_mask, adjacent_mask)
+        if policy.decoder.last_bias_values is not None:
+            bias_steps.append(policy.decoder.last_bias_values.detach())
         if sample_actions:
             distribution = torch.distributions.Categorical(probs=probabilities)
             next_cities = distribution.sample()
@@ -101,4 +139,13 @@ def rollout_batch(
     # roll(-1) 把路线最后一个城市连回起点，得到闭环路线长度。
     lengths = distances[batch_ids, route_ids, route_ids.roll(-1, dims=-1)].sum(dim=-1)
     route_log_probs = torch.stack(selected_log_probs).sum(dim=0) if sample_actions else None
-    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total, decision_count)
+    bias_stats = None
+    if bias_steps:
+        values = torch.stack(bias_steps).reshape(-1, 2)
+        bias_stats = {
+            f"{kind}_{stat}": float(getattr(values[:, index], stat)().item())
+            for index, kind in enumerate(("same", "adjacent"))
+            for stat in ("mean", "min", "max")
+        }
+        bias_stats["count"] = float(values.shape[0])
+    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total, decision_count, bias_stats)

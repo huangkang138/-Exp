@@ -116,6 +116,7 @@ def load_policy(checkpoint: Path, device: torch.device) -> tuple[POMOPolicy, dic
         candidate_mode=str(model.get("candidate_mode", "hard")),
         same_ball_bias=float(model.get("same_ball_bias", 2.0)),
         adjacent_ball_bias=float(model.get("adjacent_ball_bias", 1.0)),
+        bias_mode=str(model.get("bias_mode", "fixed")),
     ).to(device)
     policy.load_state_dict(state["model_state_dict"], strict=True)
     policy.eval()

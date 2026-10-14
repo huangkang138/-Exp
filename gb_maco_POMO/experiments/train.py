@@ -200,6 +200,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--encoder-layers", type=int)
     parser.add_argument("--num-heads", type=int)
     parser.add_argument("--candidate-mode", choices=("hard", "soft", "none"))
+    parser.add_argument("--bias-mode", choices=("fixed", "learnable"))
     parser.add_argument("--same-ball-bias", type=float)
     parser.add_argument("--adjacent-ball-bias", type=float)
     parser.add_argument("--save-interval", type=int)
@@ -234,6 +235,7 @@ def main(argv: list[str] | None = None) -> None:
         "model.encoder_layers": args.encoder_layers,
         "model.num_heads": args.num_heads,
         "model.candidate_mode": args.candidate_mode,
+        "model.bias_mode": args.bias_mode,
         "model.same_ball_bias": args.same_ball_bias,
         "model.adjacent_ball_bias": args.adjacent_ball_bias,
         "checkpoint.save_interval": args.save_interval,

@@ -68,6 +68,7 @@ class POMORollout:
     route_log_probs: Tensor  # [N]，每条路线各次动作 logP 的和。
     first_step: StepRecord
     candidate_decisions: list[CandidateDecision]
+    bias_values: Tensor | None = None  # [step, POMO, same/adjacent]
 
 
 @dataclass
@@ -128,6 +129,7 @@ def rollout(
     routes = [[start] for start in range(city_count)]
     visited = [{start} for start in range(city_count)]
     selected_log_probs: list[Tensor] = []
+    bias_steps: list[Tensor] = []
     first_step: StepRecord | None = None
     """
     执行后：
@@ -146,6 +148,8 @@ def rollout(
             (1, city_count, city_count), dtype=torch.bool, device=device
         )
         candidate_bias = torch.zeros((1, city_count, city_count), device=device)
+        same_mask = torch.zeros_like(candidate_mask) if policy.bias_mode == "learnable" else None
+        adjacent_mask = torch.zeros_like(candidate_mask) if policy.bias_mode == "learnable" else None
         candidates_per_route: list[list[int]] = []
         for pomo_id in range(city_count):
             current_city = routes[pomo_id][-1]#是这条路线的最后一个城市，也就是当前位
@@ -178,10 +182,19 @@ def rollout(
             candidates_per_route.append(candidates)
             candidate_mask[0, pomo_id, candidates] = True
             candidate_bias[0, pomo_id] = torch.tensor(bias, device=device)
+            if same_mask is not None and adjacent_mask is not None:
+                neighbors = prepared.ball_adjacency[current_ball]
+                for city in candidates:
+                    ball = prepared.city_to_ball[city]
+                    same_mask[0, pomo_id, city] = ball == current_ball
+                    adjacent_mask[0, pomo_id, city] = ball != current_ball and ball in neighbors
 
         probabilities = policy(
-            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias
+            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias,
+            same_mask, adjacent_mask,
         )  # [1,N,N]，第二维是路线，第三维是城市。
+        if policy.decoder.last_bias_values is not None:
+            bias_steps.append(policy.decoder.last_bias_values[0].detach().cpu())
         # 对每条路线的每一步都检查 Mask 和概率，而不只检查最终路线。
         if not torch.isfinite(probabilities).all().item():
             raise RuntimeError("概率出现 NaN 或 Inf")
@@ -253,6 +266,7 @@ def rollout(
         route_log_probs,
         first_step,
         candidate_decisions,
+        torch.stack(bias_steps) if bias_steps else None,
     )
 
 
@@ -320,6 +334,7 @@ class SearchResult:
     routes: list[list[int]]
     lengths: list[int]
     fallback_count: int  # 仅统计 hard 模式实际触发的候选集 fallback。
+    bias_values: Tensor | None = None  # 贪心 rollout 的逐步逐起点偏好，用于诊断。
 
 
 @torch.no_grad()
@@ -340,6 +355,7 @@ def search_routes(
     started = time.perf_counter()
     routes: list[list[int]] = []
     fallback_count = 0
+    bias_values = None
     with torch.random.fork_rng(devices=devices):
         torch.manual_seed(seed)
         if device.type == "cuda":
@@ -350,6 +366,8 @@ def search_routes(
         for sample_actions in action_modes:
             outcome = rollout(policy, prepared, sample_actions=sample_actions)
             routes.extend(outcome.routes)
+            if not sample_actions:
+                bias_values = outcome.bias_values
             # soft/none 始终保留所有未访问城市，不会触发 hard 的候选集 fallback。
             if policy.candidate_mode == "hard":
                 fallback_count += sum(decision.fallback_used for decision in outcome.candidate_decisions)
@@ -366,7 +384,7 @@ def search_routes(
     return SearchResult(
         best_routes[0], best, best_routes, len(routes), len(unique),
         1 - len(unique) / len(routes), quality, quality / len(unique),
-        time.perf_counter() - started, routes, lengths, fallback_count,
+        time.perf_counter() - started, routes, lengths, fallback_count, bias_values,
     )
 
 

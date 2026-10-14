@@ -214,6 +214,16 @@ class POMODecoder(nn.Module):
         )
         self.final_query = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.final_key = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.bias_head: nn.Sequential | None = None
+        self.last_bias_values: Tensor | None = None
+
+    def enable_learnable_bias(self) -> None:
+        """Zero output layer gives exactly +2/+1 before any optimizer update."""
+        self.bias_head = nn.Sequential(
+            nn.Linear(self.embedding_dim, 32), nn.ReLU(), nn.Linear(32, 2)
+        )
+        nn.init.zeros_(self.bias_head[-1].weight)
+        nn.init.zeros_(self.bias_head[-1].bias)
 
     def forward(
         self,
@@ -222,6 +232,8 @@ class POMODecoder(nn.Module):
         current_cities: Tensor,
         candidate_mask: Tensor,
         candidate_bias: Tensor | None = None,
+        same_ball_mask: Tensor | None = None,
+        adjacent_ball_mask: Tensor | None = None,
     ) -> Tensor:
         """为每条 POMO 路线计算一次下一城市的概率。
 
@@ -257,6 +269,18 @@ class POMODecoder(nn.Module):
             1, current_cities.unsqueeze(-1).expand(-1, -1, embedding_dim)
         )
         query = self.query_projection(torch.cat((first, current), dim=-1))
+        # Bias Head 只读现有 Query；它没有完整路径历史，也不新增 RL 状态。
+        self.last_bias_values = None
+        if self.bias_head is not None:
+            if (same_ball_mask is None or adjacent_ball_mask is None or
+                    same_ball_mask.shape != candidate_mask.shape or
+                    adjacent_ball_mask.shape != candidate_mask.shape or
+                    same_ball_mask.dtype != torch.bool or
+                    adjacent_ball_mask.dtype != torch.bool or
+                    (same_ball_mask & adjacent_ball_mask).any().item()):
+                raise ValueError("learnable bias requires disjoint [B,P,N] relation masks")
+            raw_bias = self.bias_head(query)
+            self.last_bias_values = torch.sigmoid(raw_bias) * raw_bias.new_tensor((4.0, 2.0))
         # 每条路线的 Query 与全体城市的 Key/Value 交互，形成当前路线 context。
         context, _ = self.cross_attention(
             query, encoded_nodes, encoded_nodes, need_weights=False
@@ -269,6 +293,11 @@ class POMODecoder(nn.Module):
         scores = self.logit_clip * torch.tanh(scores)
         if candidate_bias is not None:
             scores = scores + candidate_bias
+        if self.last_bias_values is not None:
+            scores = scores + (
+                same_ball_mask.to(scores.dtype) * self.last_bias_values[..., 0, None]
+                + adjacent_ball_mask.to(scores.dtype) * self.last_bias_values[..., 1, None]
+            )
         scores = scores.masked_fill(~candidate_mask, float("-inf"))
         return torch.softmax(scores, dim=-1)
 
@@ -287,11 +316,19 @@ class POMOPolicy(nn.Module):
         candidate_mode: str = "hard",
         same_ball_bias: float = 2.0,
         adjacent_ball_bias: float = 1.0,
+        bias_mode: str = "fixed",
     ) -> None:
         """创建城市 Encoder 和路线 Decoder，默认 D=128、8 个头、3 层 Encoder。"""
         super().__init__()
         self.encoder = CityEncoder(5, embedding_dim, head_num, encoder_layer_num)
         self.decoder = POMODecoder(embedding_dim, head_num)
+        if bias_mode not in ("fixed", "learnable"):
+            raise ValueError("bias_mode 必须是 fixed 或 learnable")
+        if bias_mode == "learnable" and candidate_mode != "soft":
+            raise ValueError("learnable bias 仅适用于 soft 候选模式")
+        self.bias_mode = bias_mode
+        if bias_mode == "learnable":
+            self.decoder.enable_learnable_bias()
         if candidate_mode not in ("hard", "soft", "none"):
             raise ValueError("candidate_mode 必须是 hard、soft 或 none")
         if not all(isfinite(v) for v in (same_ball_bias, adjacent_ball_bias)) or not (
@@ -313,10 +350,13 @@ class POMOPolicy(nn.Module):
         current_cities: Tensor,
         candidate_mask: Tensor,
         candidate_bias: Tensor | None = None,
+        same_ball_mask: Tensor | None = None,
+        adjacent_ball_mask: Tensor | None = None,
     ) -> Tensor:
         """在某一步调用 Decoder，用各路线状态和候选 Mask 得到下一城市概率。"""
         return self.decoder(
-            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias
+            encoded_nodes, first_cities, current_cities, candidate_mask, candidate_bias,
+            same_ball_mask, adjacent_ball_mask,
         )
 
 
@@ -332,7 +372,7 @@ def candidate_guidance(
     else:
         candidates = [city for city in range(city_count) if city not in visited]
     bias = [0.0] * city_count
-    if policy.candidate_mode == "soft":
+    if policy.candidate_mode == "soft" and policy.bias_mode == "fixed":
         current_ball = mapping[current_city]
         neighbors = adjacency[current_ball]
         for city in candidates:

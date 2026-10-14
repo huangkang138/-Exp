@@ -21,6 +21,8 @@ from .data import DatasetInstance, batches_by_city_count, load_manifest
 HISTORY_FIELDS = (
     "epoch", "train_mean_length", "train_mean_best_length", "validation_mean_best_length",
     "mean_loss", "fallback_count", "fallback_rate", "average_candidate_size", "seconds",
+    "same_bias_mean", "same_bias_min", "same_bias_max",
+    "adjacent_bias_mean", "adjacent_bias_min", "adjacent_bias_max",
 )
 GROUP_FIELDS = ("epoch", "distribution", "city_count", "instance_count", "mean_best_length")
 
@@ -93,6 +95,10 @@ def _train_epoch(
     batches = batches_by_city_count(instances, batch_size, rng)
     route_total = best_total = loss_total = 0.0
     fallback_total = candidate_total = decision_total = instance_total = 0
+    bias_sum = {kind: 0.0 for kind in ("same", "adjacent")}
+    bias_min = {kind: float("inf") for kind in bias_sum}
+    bias_max = {kind: float("-inf") for kind in bias_sum}
+    bias_count = 0.0
     started = time.perf_counter()
     for batch_index, batch in enumerate(batches, start=1):
         optimizer.zero_grad()
@@ -115,11 +121,24 @@ def _train_epoch(
             fallback_total += outcome.fallback_count
             candidate_total += outcome.candidate_total
             decision_total += outcome.decision_count
+            if outcome.bias_stats is not None:
+                count = outcome.bias_stats["count"]
+                bias_count += count
+                for kind in bias_sum:
+                    bias_sum[kind] += outcome.bias_stats[f"{kind}_mean"] * count
+                    bias_min[kind] = min(bias_min[kind], outcome.bias_stats[f"{kind}_min"])
+                    bias_max[kind] = max(bias_max[kind], outcome.bias_stats[f"{kind}_max"])
         optimizer.step()
         loss_total += batch_loss * len(batch)
         instance_total += len(batch)
         if batch_index % 10 == 0 or batch_index == len(batches):
             print(f"epoch {epoch}: {batch_index}/{len(batches)} batches", flush=True)
+    bias_columns = {}
+    if bias_count:
+        for kind in bias_sum:
+            bias_columns[f"{kind}_bias_mean"] = bias_sum[kind] / bias_count
+            bias_columns[f"{kind}_bias_min"] = bias_min[kind]
+            bias_columns[f"{kind}_bias_max"] = bias_max[kind]
     return {
         "train_mean_length": route_total / instance_total,
         "train_mean_best_length": best_total / instance_total,
@@ -128,6 +147,7 @@ def _train_epoch(
         "fallback_rate": fallback_total / decision_total,
         "average_candidate_size": candidate_total / decision_total,
         "seconds": time.perf_counter() - started,
+        **bias_columns,
     }
 
 
@@ -162,6 +182,7 @@ def run_training(config: dict[str, dict[str, object]], source_config: Path) -> d
         candidate_mode=str(model_cfg["candidate_mode"]),
         same_ball_bias=float(model_cfg["same_ball_bias"]),
         adjacent_ball_bias=float(model_cfg["adjacent_ball_bias"]),
+        bias_mode=str(model_cfg.get("bias_mode", "fixed")),
     ).to(device)
     optimizer = torch.optim.Adam(policy.parameters(), lr=float(config["training"]["learning_rate"]))
     results_root = Path(str(config["output"]["results_root"]))
@@ -248,7 +269,12 @@ def run_training(config: dict[str, dict[str, object]], source_config: Path) -> d
         print(
             f"Epoch {epoch}: train={stats['train_mean_best_length']:.2f}, "
             f"validation={val_mean if val_mean is not None else '-'}, best={best_val:.2f}, "
-            f"seconds={stats['seconds']:.1f}", flush=True,
+            f"seconds={stats['seconds']:.1f}, loss={stats['mean_loss']:.4f}"
+            + (f", same={stats['same_bias_mean']:.3f}"
+               f"[{stats['same_bias_min']:.3f},{stats['same_bias_max']:.3f}]"
+               f", adjacent={stats['adjacent_bias_mean']:.3f}"
+               f"[{stats['adjacent_bias_min']:.3f},{stats['adjacent_bias_max']:.3f}]"
+               if 'same_bias_mean' in stats else ''), flush=True,
         )
 
     result: dict[str, object] = {

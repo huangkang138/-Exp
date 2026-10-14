@@ -62,6 +62,11 @@ def load_config(path: Path, overrides: dict[str, object]) -> dict[str, dict[str,
         raise ValueError("embedding_dim 必须能被 num_heads 整除")
     model = config["model"]
     model.setdefault("candidate_mode", "hard")
+    model.setdefault("bias_mode", "fixed")
+    if model["bias_mode"] not in ("fixed", "learnable"):
+        raise ValueError("bias_mode 必须是 fixed 或 learnable")
+    if model["bias_mode"] == "learnable" and model["candidate_mode"] != "soft":
+        raise ValueError("learnable bias 仅适用于 soft 候选模式")
     model.setdefault("same_ball_bias", 2.0)
     model.setdefault("adjacent_ball_bias", 1.0)
     if model["candidate_mode"] not in ("hard", "soft", "none"):
