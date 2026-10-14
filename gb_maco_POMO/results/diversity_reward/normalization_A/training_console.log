@@ -1,0 +1,107 @@
+New run_20261014_191555_39b027: train=500, validation=100, device=cuda
+epoch 1: 10/11 batches
+epoch 1: 11/11 batches
+Epoch 1: train=7606.01, validation=-, best=inf, seconds=50.1
+epoch 2: 10/11 batches
+epoch 2: 11/11 batches
+Epoch 2: train=6498.22, validation=-, best=inf, seconds=49.9
+epoch 3: 10/11 batches
+epoch 3: 11/11 batches
+Epoch 3: train=6478.00, validation=-, best=inf, seconds=43.5
+epoch 4: 10/11 batches
+epoch 4: 11/11 batches
+Epoch 4: train=6405.53, validation=4964.45, best=4964.45, seconds=43.5
+epoch 5: 10/11 batches
+epoch 5: 11/11 batches
+Epoch 5: train=6347.30, validation=-, best=4964.45, seconds=43.9
+epoch 6: 10/11 batches
+epoch 6: 11/11 batches
+Epoch 6: train=6264.74, validation=-, best=4964.45, seconds=43.5
+epoch 7: 10/11 batches
+epoch 7: 11/11 batches
+Epoch 7: train=6309.43, validation=-, best=4964.45, seconds=43.6
+epoch 8: 10/11 batches
+epoch 8: 11/11 batches
+Epoch 8: train=6326.56, validation=4735.36, best=4735.36, seconds=49.1
+epoch 9: 10/11 batches
+epoch 9: 11/11 batches
+Epoch 9: train=6342.88, validation=-, best=4735.36, seconds=49.3
+epoch 10: 10/11 batches
+epoch 10: 11/11 batches
+Epoch 10: train=6342.27, validation=-, best=4735.36, seconds=49.3
+epoch 11: 10/11 batches
+epoch 11: 11/11 batches
+Epoch 11: train=6330.57, validation=-, best=4735.36, seconds=44.1
+epoch 12: 10/11 batches
+epoch 12: 11/11 batches
+Epoch 12: train=6355.84, validation=4725.61, best=4725.61, seconds=43.9
+epoch 13: 10/11 batches
+epoch 13: 11/11 batches
+Epoch 13: train=6309.07, validation=-, best=4725.61, seconds=43.5
+epoch 14: 10/11 batches
+epoch 14: 11/11 batches
+Epoch 14: train=6323.02, validation=-, best=4725.61, seconds=44.7
+epoch 15: 10/11 batches
+epoch 15: 11/11 batches
+Epoch 15: train=6314.46, validation=-, best=4725.61, seconds=48.8
+epoch 16: 10/11 batches
+epoch 16: 11/11 batches
+Epoch 16: train=6288.88, validation=4744.52, best=4725.61, seconds=47.0
+epoch 17: 10/11 batches
+epoch 17: 11/11 batches
+Epoch 17: train=6274.12, validation=-, best=4725.61, seconds=43.7
+epoch 18: 10/11 batches
+epoch 18: 11/11 batches
+Epoch 18: train=6271.35, validation=-, best=4725.61, seconds=43.8
+epoch 19: 10/11 batches
+epoch 19: 11/11 batches
+Epoch 19: train=6253.70, validation=-, best=4725.61, seconds=43.2
+epoch 20: 10/11 batches
+epoch 20: 11/11 batches
+Epoch 20: train=6246.87, validation=4750.5, best=4725.61, seconds=44.8
+epoch 21: 10/11 batches
+epoch 21: 11/11 batches
+Epoch 21: train=6206.85, validation=-, best=4725.61, seconds=44.7
+epoch 22: 10/11 batches
+epoch 22: 11/11 batches
+Epoch 22: train=6211.63, validation=-, best=4725.61, seconds=46.6
+epoch 23: 10/11 batches
+epoch 23: 11/11 batches
+Epoch 23: train=6199.69, validation=-, best=4725.61, seconds=43.9
+epoch 24: 10/11 batches
+epoch 24: 11/11 batches
+Epoch 24: train=6182.48, validation=4744.72, best=4725.61, seconds=43.9
+epoch 25: 10/11 batches
+epoch 25: 11/11 batches
+Epoch 25: train=6190.36, validation=-, best=4725.61, seconds=43.8
+epoch 26: 10/11 batches
+epoch 26: 11/11 batches
+Epoch 26: train=6186.40, validation=-, best=4725.61, seconds=43.3
+epoch 27: 10/11 batches
+epoch 27: 11/11 batches
+Epoch 27: train=6142.29, validation=-, best=4725.61, seconds=43.7
+epoch 28: 10/11 batches
+epoch 28: 11/11 batches
+Epoch 28: train=6160.28, validation=4745.03, best=4725.61, seconds=43.6
+epoch 29: 10/11 batches
+epoch 29: 11/11 batches
+Epoch 29: train=6133.20, validation=-, best=4725.61, seconds=43.4
+epoch 30: 10/11 batches
+epoch 30: 11/11 batches
+Epoch 30: train=6133.57, validation=-, best=4725.61, seconds=43.8
+epoch 31: 10/11 batches
+epoch 31: 11/11 batches
+Epoch 31: train=6144.73, validation=-, best=4725.61, seconds=47.2
+epoch 32: 10/11 batches
+epoch 32: 11/11 batches
+Epoch 32: train=6129.59, validation=4763.01, best=4725.61, seconds=44.6
+epoch 33: 10/11 batches
+epoch 33: 11/11 batches
+Epoch 33: train=6095.40, validation=-, best=4725.61, seconds=44.7
+epoch 34: 10/11 batches
+epoch 34: 11/11 batches
+Epoch 34: train=6114.84, validation=-, best=4725.61, seconds=45.7
+epoch 35: 10/11 batches
+epoch 35: 11/11 batches
+Epoch 35: train=6121.78, validation=4737.73, best=4725.61, seconds=43.5
+Finished: D:\Project\��������\GB-MACO_python\gb_maco_POMO\results\diversity_reward\normalization_A\run_20261014_191555_39b027

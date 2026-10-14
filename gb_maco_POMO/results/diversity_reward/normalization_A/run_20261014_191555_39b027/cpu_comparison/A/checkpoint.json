@@ -1,0 +1,9 @@
+{
+  "path": "D:\\Project\\\u7403\u7c92\u8ba1\u7b97\\GB-MACO_python\\gb_maco_POMO\\results\\checkpoints\\diversity_reward\\normalization_A\\run_20261014_191555_39b027\\best.pt",
+  "sha256": "5b1d5aa680dd543ee47899ba1e28d5b0062370fa1b0adb4744b93b92a70bddeb",
+  "epoch": 12,
+  "device": "cpu",
+  "seed": 42,
+  "samples_per_start": 8,
+  "extra_checks": 50000
+}

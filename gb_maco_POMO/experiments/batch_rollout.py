@@ -14,13 +14,14 @@ from .data import DatasetInstance
 
 @dataclass
 class BatchRollout:
-    """B 个算例各有 N 条路线；长度与 logP 的形状都是 [B,N]。"""
+    """B 个算例各有 N 条路线；routes 为 [B,N,N] 城市编号。"""
 
     lengths: Tensor
     route_log_probs: Tensor | None
     fallback_count: int
     candidate_total: int
     decision_count: int
+    routes: Tensor | None = None
 
 
 def rollout_batch(
@@ -101,4 +102,4 @@ def rollout_batch(
     # roll(-1) 把路线最后一个城市连回起点，得到闭环路线长度。
     lengths = distances[batch_ids, route_ids, route_ids.roll(-1, dims=-1)].sum(dim=-1)
     route_log_probs = torch.stack(selected_log_probs).sum(dim=0) if sample_actions else None
-    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total, decision_count)
+    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total, decision_count, route_ids)

@@ -16,6 +16,7 @@ import torch
 from ..attention import POMOPolicy
 from .batch_rollout import rollout_batch
 from .data import DatasetInstance, batches_by_city_count, load_manifest
+from .diversity_reward import diversity_reward, lambda_at_epoch
 
 
 HISTORY_FIELDS = (
@@ -87,12 +88,14 @@ def _train_epoch(
     policy: POMOPolicy, optimizer: torch.optim.Optimizer,
     instances: list[DatasetInstance], batch_size: int, micro_batch_size: int,
     device: torch.device, rng: random.Random, epoch: int,
+    reward_config: dict[str, object] | None = None,
 ) -> dict[str, float | int]:
     """一个有效 batch 更新一次；多个 micro batch 的梯度按实例数加权累积。"""
     policy.train()
     batches = batches_by_city_count(instances, batch_size, rng)
     route_total = best_total = loss_total = 0.0
     fallback_total = candidate_total = decision_total = instance_total = 0
+    reward_config = reward_config or {"mode": "length"}
     started = time.perf_counter()
     for batch_index, batch in enumerate(batches, start=1):
         optimizer.zero_grad()
@@ -101,7 +104,20 @@ def _train_epoch(
             micro = batch[start:start + micro_batch_size]
             outcome = rollout_batch(policy, micro, device, sample_actions=True)
             assert outcome.route_log_probs is not None
-            rewards = -outcome.lengths
+            if reward_config["mode"] == "diversity" and epoch > int(reward_config["warmup_epochs"]):
+                assert outcome.routes is not None
+                current_lambda = lambda_at_epoch(
+                    epoch, target=float(reward_config["lambda"]),
+                    warmup_epochs=int(reward_config["warmup_epochs"]),
+                    ramp_epochs=int(reward_config["ramp_epochs"]),
+                )
+                rewards = diversity_reward(
+                    outcome.lengths, outcome.routes,
+                    quality_ratio=float(reward_config["quality_ratio"]),
+                    diversity_lambda=current_lambda,
+                )
+            else:
+                rewards = -outcome.lengths
             advantages = rewards - rewards.mean(dim=1, keepdim=True)
             # micro 的 mean 已除以自身实例数；再按 micro/batch 比例还原整批 mean。
             loss = -(advantages.detach() * outcome.route_log_probs).mean()
@@ -139,6 +155,8 @@ def _check_resume_config(current: dict[str, dict[str, object]], saved: dict[str,
     for key in ("batch_size", "micro_batch_size", "learning_rate", "seed"):
         if current["training"][key] != saved["training"][key]:
             raise ValueError(f"续训时 [training] {key} 与原运行配置不同")
+    if current.get("reward", {"mode": "length"}) != saved.get("reward", {"mode": "length"}):
+        raise ValueError("续训时 [reward] 与原运行配置不同")
 
 
 def run_training(config: dict[str, dict[str, object]], source_config: Path) -> dict[str, object]:
@@ -215,6 +233,7 @@ def run_training(config: dict[str, dict[str, object]], source_config: Path) -> d
             policy, optimizer, train_instances,
             int(config["training"]["batch_size"]),
             int(config["training"]["micro_batch_size"]), device, rng, epoch,
+            config.get("reward", {"mode": "length"}),
         )
         val_mean: float | None = None
         improved = False

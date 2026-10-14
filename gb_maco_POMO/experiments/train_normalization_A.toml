@@ -1,0 +1,43 @@
+# 实验 A：前 5 轮原距离奖励，此后使用 -L/Lmin；仅将 λ 设为 0。
+# CUDA 训练，独立输出目录，resume 留空；原模型和 λ=0.01 实验均不覆盖。
+[training]
+epochs = 35
+batch_size = 64
+micro_batch_size = 8
+learning_rate = 0.0001
+seed = 42
+
+[model]
+embedding_dim = 128
+encoder_layers = 3
+num_heads = 8
+candidate_mode = "soft"
+same_ball_bias = 2.0
+adjacent_ball_bias = 1.0
+
+[validation]
+interval = 4
+batch_size = 64
+
+[data]
+root = "../../benachmark_Train_MATSP_500"
+train_dir = "train"
+validation_dir = "validation"
+
+[checkpoint]
+save_interval = 20
+resume = ""
+
+[runtime]
+device = "cuda"
+
+[output]
+results_root = "../results/diversity_reward/normalization_A"
+checkpoints_root = "../results/checkpoints/diversity_reward/normalization_A"
+
+[reward]
+mode = "diversity"
+quality_ratio = 1.02
+lambda = 0.0
+warmup_epochs = 5
+ramp_epochs = 5

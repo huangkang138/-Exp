@@ -1,0 +1,11 @@
+{
+  "run_id": "run_20261014_180236_441c9b",
+  "train_instances": 500,
+  "validation_instances": 100,
+  "device": "cuda",
+  "completed_epochs": 35,
+  "best_epoch": 35,
+  "best_validation_mean_best_length": 4657.73,
+  "results_dir": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\diversity_reward\\run_20261014_180236_441c9b",
+  "checkpoints_dir": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\checkpoints\\diversity_reward\\run_20261014_180236_441c9b"
+}

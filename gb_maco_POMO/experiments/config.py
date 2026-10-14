@@ -72,4 +72,17 @@ def load_config(path: Path, overrides: dict[str, object]) -> dict[str, dict[str,
         raise ValueError("偏好必须满足 0 <= adjacent <= same <= 10")
     if config["runtime"]["device"] not in ("auto", "cuda", "cpu"):
         raise ValueError("[runtime] device 只能是 auto、cuda 或 cpu")
+    reward = config.get("reward", {"mode": "length"})
+    if not isinstance(reward, dict) or reward.get("mode") not in ("length", "diversity"):
+        raise ValueError("[reward] mode 只能是 length 或 diversity")
+    if reward["mode"] == "diversity":
+        if set(reward) != {"mode", "quality_ratio", "lambda", "warmup_epochs", "ramp_epochs"}:
+            raise ValueError("[reward] diversity 必须设置 quality_ratio、lambda、warmup_epochs、ramp_epochs")
+        ratio, strength = reward["quality_ratio"], reward["lambda"]
+        if any(type(value) not in (int, float) or not isfinite(value)
+               for value in (ratio, strength)) or not 1.0 < ratio <= 2.0 or not 0 <= strength <= 1.0:
+            raise ValueError("[reward] quality_ratio 须在 (1,2]；lambda 须在 [0,1]")
+        for key in ("warmup_epochs", "ramp_epochs"):
+            if type(reward[key]) is not int or reward[key] < 0:
+                raise ValueError(f"[reward] {key} 必须是非负整数")
     return config
