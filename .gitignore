@@ -1,0 +1,28 @@
+# Local experiment outputs and training artifacts
+results/
+checkpoints/
+Results_*/
+*.alg_solution
+__pycache__/
+*.py[cod]
+
+# Local benchmark datasets
+benachmark_Train_MATSP/
+benachmark_Train_MATSP_500/
+*.tsp
+*.solution
+
+# Research notes and exported reports
+*.md
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# IDE files and local source archives
+.idea/
+*.iml
+*.zip
