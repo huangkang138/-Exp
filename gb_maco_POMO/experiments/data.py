@@ -20,43 +20,48 @@ class DatasetInstance:
 def load_manifest(data: dict[str, object]) -> tuple[list[DatasetInstance], list[DatasetInstance]]:
     """校验全部文件与 SHA256，训练集和验证集按 manifest 的 split 分开。"""
     root = Path(str(data["root"]))
+    train_root = Path(str(data.get("train_root", root)))
+    roots = {"train": train_root, "validation": root}
     directories = {
-        "train": (root / str(data["train_dir"])).resolve(),
+        "train": (train_root / str(data["train_dir"])).resolve(),
         "validation": (root / str(data["validation_dir"])).resolve(),
     }
-    manifest = root / "manifest.csv"
-    if not manifest.is_file():
-        raise FileNotFoundError(f"找不到数据清单：{manifest}")
     partitions: dict[str, list[DatasetInstance]] = {"train": [], "validation": []}
     missing: list[str] = []
     seen: set[Path] = set()
-    with manifest.open(newline="", encoding="utf-8-sig") as stream:
-        reader = csv.DictReader(stream)
-        required = {"split", "distribution", "city_count", "relative_path", "sha256"}
-        if reader.fieldnames is None or not required.issubset(reader.fieldnames):
-            raise ValueError(f"manifest.csv 缺少列：{sorted(required - set(reader.fieldnames or []))}")
-        for line_number, row in enumerate(reader, start=2):
-            split = row["split"]
-            if split not in partitions:
-                raise ValueError(f"清单第 {line_number} 行的 split 无效：{split}")
-            path = (root / row["relative_path"]).resolve()
-            if not path.is_relative_to(directories[split]) or path.suffix.lower() != ".tsp":
-                raise ValueError(f"清单第 {line_number} 行的路径不属于 {split}：{path}")
-            if path in seen:
-                raise ValueError(f"清单中重复列出文件：{path}")
-            seen.add(path)
-            if not path.is_file():
-                missing.append(row["relative_path"])
-                continue
-            if hashlib.sha256(path.read_bytes()).hexdigest().lower() != row["sha256"].lower():
-                raise ValueError(f"文件 SHA256 与清单不一致：{path}")
-            try:
-                city_count = int(row["city_count"])
-            except (TypeError, ValueError) as exc:
-                raise ValueError(f"清单第 {line_number} 行的 city_count 无效") from exc
-            if city_count < 2:
-                raise ValueError(f"清单第 {line_number} 行至少需要两个城市")
-            partitions[split].append(DatasetInstance(path, city_count, row["distribution"]))
+    for selected_split, selected_root in roots.items():
+        manifest = selected_root / "manifest.csv"
+        if not manifest.is_file():
+            raise FileNotFoundError(f"找不到数据清单：{manifest}")
+        with manifest.open(newline="", encoding="utf-8-sig") as stream:
+            reader = csv.DictReader(stream)
+            required = {"split", "distribution", "city_count", "relative_path", "sha256"}
+            if reader.fieldnames is None or not required.issubset(reader.fieldnames):
+                raise ValueError(f"manifest.csv 缺少列：{sorted(required - set(reader.fieldnames or []))}")
+            for line_number, row in enumerate(reader, start=2):
+                split = row["split"]
+                if split not in partitions:
+                    raise ValueError(f"清单第 {line_number} 行的 split 无效：{split}")
+                if split != selected_split:
+                    continue
+                path = (selected_root / row["relative_path"]).resolve()
+                if not path.is_relative_to(directories[split]) or path.suffix.lower() != ".tsp":
+                    raise ValueError(f"清单第 {line_number} 行的路径不属于 {split}：{path}")
+                if path in seen:
+                    raise ValueError(f"清单中重复列出文件：{path}")
+                seen.add(path)
+                if not path.is_file():
+                    missing.append(row["relative_path"])
+                    continue
+                if hashlib.sha256(path.read_bytes()).hexdigest().lower() != row["sha256"].lower():
+                    raise ValueError(f"文件 SHA256 与清单不一致：{path}")
+                try:
+                    city_count = int(row["city_count"])
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(f"清单第 {line_number} 行的 city_count 无效") from exc
+                if city_count < 2:
+                    raise ValueError(f"清单第 {line_number} 行至少需要两个城市")
+                partitions[split].append(DatasetInstance(path, city_count, row["distribution"]))
     if missing:
         raise FileNotFoundError(f"清单中的 {len(missing)} 个 .tsp 不存在，例如：{missing[:3]}")
     if not partitions["train"] or not partitions["validation"]:

@@ -216,6 +216,7 @@ class POMODecoder(nn.Module):
         self.final_key = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.bias_head: nn.Sequential | None = None
         self.last_bias_values: Tensor | None = None
+        self.last_logits: Tensor | None = None  # Diagnostic: after Bias, before visited-city Mask.
 
     def enable_learnable_bias(self) -> None:
         """Zero output layer gives exactly +2/+1 before any optimizer update."""
@@ -298,6 +299,7 @@ class POMODecoder(nn.Module):
                 same_ball_mask.to(scores.dtype) * self.last_bias_values[..., 0, None]
                 + adjacent_ball_mask.to(scores.dtype) * self.last_bias_values[..., 1, None]
             )
+        self.last_logits = scores.detach()
         scores = scores.masked_fill(~candidate_mask, float("-inf"))
         return torch.softmax(scores, dim=-1)
 

@@ -1,0 +1,41 @@
+{
+  "dataset_name": "MSTSP_Complex_Multiopt_Test",
+  "generation_seed": 20261015,
+  "sizes": [
+    32,
+    36,
+    40,
+    48,
+    60,
+    64,
+    72,
+    80,
+    96,
+    100,
+    120,
+    128,
+    144,
+    160,
+    192,
+    196,
+    240,
+    256,
+    320,
+    400,
+    512,
+    640,
+    800
+  ],
+  "shapes": [
+    "rectangle",
+    "strip",
+    "compact",
+    "elongated",
+    "ring",
+    "rooms"
+  ],
+  "instances": 138,
+  "certified_optimal_witnesses_per_instance": "8 for n<64, 16 for n>=64",
+  "algorithm": "2x2-tile spanning-tree splicing on rotated integer lattice",
+  "test_only": true
+}

@@ -36,6 +36,9 @@ def load_config(path: Path, overrides: dict[str, object]) -> dict[str, dict[str,
                          ("output", "checkpoints_root")):
         value = Path(str(config[section][key])).expanduser()
         config[section][key] = str((config_path.parent / value).resolve())
+    if "train_root" in config["data"]:
+        value = Path(str(config["data"]["train_root"])).expanduser()
+        config["data"]["train_root"] = str((config_path.parent / value).resolve())
     resume = str(config["checkpoint"]["resume"])
     if resume:
         value = Path(resume).expanduser()

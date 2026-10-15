@@ -1,0 +1,29 @@
+{
+  "input_mode": "fresh_pomo_once_per_case",
+  "checkpoint": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\checkpoints\\run_20261013_230742_828b99\\best.pt",
+  "checkpoint_sha256": "dbdfc5cb2faef0d7cbecb7c5c7cc77db16049e5d10e5d584a26e288f1bd88410",
+  "checkpoint_epoch": 35,
+  "device": "cpu",
+  "seed": 42,
+  "samples_per_start": 8,
+  "extra_pair_check_ceiling_per_instance": 50000,
+  "instances": 25,
+  "batch_seconds": 115.15175789999921,
+  "groups": {
+    "a": {
+      "optimal_distance_cases": 25,
+      "mean_fbeta": 0.7326761097978374,
+      "optimal_hits": 250,
+      "pair_checks": 190415757,
+      "seconds": 80.31758909999189
+    },
+    "b": {
+      "optimal_distance_cases": 25,
+      "mean_fbeta": 0.8968434047253819,
+      "optimal_hits": 663,
+      "pair_checks": 182182,
+      "seconds": 0.13213200000245706
+    }
+  },
+  "paper_mean_fbeta": 0.9176000000000001
+}

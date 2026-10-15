@@ -1,0 +1,11 @@
+{
+  "run_id": "run_20261014_223323_7de9e6",
+  "train_instances": 500,
+  "validation_instances": 100,
+  "device": "cuda",
+  "completed_epochs": 35,
+  "best_epoch": 35,
+  "best_validation_mean_best_length": 3421.11,
+  "results_dir": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\learnable_bias\\training\\run_20261014_223323_7de9e6",
+  "checkpoints_dir": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\learnable_bias\\checkpoints\\run_20261014_223323_7de9e6"
+}

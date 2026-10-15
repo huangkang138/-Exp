@@ -1,0 +1,35 @@
+[training]
+epochs = 35
+batch_size = 64
+micro_batch_size = 8
+learning_rate = 0.0001
+seed = 42
+
+[model]
+embedding_dim = 128
+encoder_layers = 3
+num_heads = 8
+candidate_mode = "soft"
+bias_mode = "learnable"
+same_ball_bias = 2.0
+adjacent_ball_bias = 1.0
+
+[validation]
+interval = 4
+batch_size = 64
+
+[data]
+root = "D:\\Project\\球粒计算\\GB-MACO_python\\benachmark_Train_MATSP_500"
+train_dir = "train"
+validation_dir = "validation"
+
+[checkpoint]
+save_interval = 20
+resume = ""
+
+[runtime]
+device = "cuda"
+
+[output]
+results_root = "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\learnable_bias\\training"
+checkpoints_root = "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\learnable_bias\\checkpoints"

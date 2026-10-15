@@ -9,6 +9,7 @@ __pycache__/
 # Local benchmark datasets
 benachmark_Train_MATSP/
 benachmark_Train_MATSP_500/
+benachmark_Train_MATSP_Multiopt_500/
 *.tsp
 *.solution
 

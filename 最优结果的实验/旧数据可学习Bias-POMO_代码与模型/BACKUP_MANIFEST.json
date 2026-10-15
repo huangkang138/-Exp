@@ -1,0 +1,27 @@
+{
+  "model": "learnable",
+  "historical_run": "run_20261014_223323_7de9e6",
+  "source_git_revision": "6ee595cbc9fed317d75003c9e2f02c5f6c939585",
+  "source_checkpoint_directory": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\learnable_bias\\checkpoints\\run_20261014_223323_7de9e6",
+  "checkpoint_sha256": {
+    "best.pt": "a45a4231997e588440d863c667cb2ff88bdba316e8b6cacb234b052be8909039",
+    "epoch_0020.pt": "891d5335300fe952b30b4abcfd170958152c5e3616ee1108eab6ac0d1163f9d2",
+    "latest.pt": "a45a4231997e588440d863c667cb2ff88bdba316e8b6cacb234b052be8909039"
+  },
+  "data_source": "D:\\Project\\球粒计算\\GB-MACO_python\\benachmark_Train_MATSP_500",
+  "source_files": [
+    "gb_maco_POMO/__init__.py",
+    "gb_maco_POMO/attention.py",
+    "gb_maco_POMO/granular_ball.py",
+    "gb_maco_POMO/tsp.py",
+    "gb_maco_POMO/runner.py",
+    "gb_maco_POMO/pomo.py",
+    "gb_maco_POMO/experiments/__init__.py",
+    "gb_maco_POMO/experiments/train.py",
+    "gb_maco_POMO/experiments/config.py",
+    "gb_maco_POMO/experiments/data.py",
+    "gb_maco_POMO/experiments/batch_rollout.py",
+    "gb_maco_POMO/experiments/train_loop.py",
+    "gb_maco_POMO/experiments/metrics.py"
+  ]
+}

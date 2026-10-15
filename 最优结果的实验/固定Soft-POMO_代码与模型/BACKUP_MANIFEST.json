@@ -1,0 +1,27 @@
+{
+  "model": "fixed",
+  "historical_run": "run_20261013_230742_828b99",
+  "source_git_revision": "250e2f77b92b649666d19d45be8660f3ccc35dee",
+  "source_checkpoint_directory": "D:\\Project\\球粒计算\\GB-MACO_python\\gb_maco_POMO\\results\\checkpoints\\run_20261013_230742_828b99",
+  "checkpoint_sha256": {
+    "best.pt": "dbdfc5cb2faef0d7cbecb7c5c7cc77db16049e5d10e5d584a26e288f1bd88410",
+    "epoch_0020.pt": "e5bbd3e5f4b031c409f4c4d6cb80ca26772f8a950da957fdce01ce7f9576565a",
+    "latest.pt": "dbdfc5cb2faef0d7cbecb7c5c7cc77db16049e5d10e5d584a26e288f1bd88410"
+  },
+  "data_source": "D:\\Project\\球粒计算\\GB-MACO_python\\benachmark_Train_MATSP_500",
+  "source_files": [
+    "gb_maco_POMO/__init__.py",
+    "gb_maco_POMO/attention.py",
+    "gb_maco_POMO/granular_ball.py",
+    "gb_maco_POMO/tsp.py",
+    "gb_maco_POMO/runner.py",
+    "gb_maco_POMO/pomo.py",
+    "gb_maco_POMO/experiments/__init__.py",
+    "gb_maco_POMO/experiments/train.py",
+    "gb_maco_POMO/experiments/config.py",
+    "gb_maco_POMO/experiments/data.py",
+    "gb_maco_POMO/experiments/batch_rollout.py",
+    "gb_maco_POMO/experiments/train_loop.py",
+    "gb_maco_POMO/experiments/metrics.py"
+  ]
+}

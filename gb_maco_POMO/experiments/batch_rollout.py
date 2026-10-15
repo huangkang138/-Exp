@@ -22,6 +22,7 @@ class BatchRollout:
     candidate_total: int
     decision_count: int
     bias_stats: dict[str, float] | None = None
+    routes: list[list[list[int]]] | None = None  # CPU route ids; sampling graph stays in route_log_probs.
 
 
 def _ball_relation_matrices(
@@ -147,5 +148,8 @@ def rollout_batch(
             for index, kind in enumerate(("same", "adjacent"))
             for stat in ("mean", "min", "max")
         }
+        for index, kind in enumerate(("same", "adjacent")):
+            bias_stats[f"{kind}_square_mean"] = float(values[:, index].square().mean().item())
         bias_stats["count"] = float(values.shape[0])
-    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total, decision_count, bias_stats)
+    return BatchRollout(lengths, route_log_probs, fallback_count, candidate_total,
+                        decision_count, bias_stats, routes)

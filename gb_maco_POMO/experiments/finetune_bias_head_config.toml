@@ -1,0 +1,41 @@
+# 检查后由用户启动 15 epoch 训练：
+# python -m gb_maco_POMO.experiments.finetune_bias_head --check
+# python -m gb_maco_POMO.experiments.finetune_bias_head
+[finetune]
+source_checkpoint = "../results/checkpoints/run_20261013_230742_828b99/best.pt"
+
+[training]
+epochs = 15
+batch_size = 64
+micro_batch_size = 8
+learning_rate = 0.0001
+seed = 42
+
+[model]
+embedding_dim = 128
+encoder_layers = 3
+num_heads = 8
+candidate_mode = "soft"
+bias_mode = "learnable"
+same_ball_bias = 2.0
+adjacent_ball_bias = 1.0
+
+[validation]
+interval = 4
+batch_size = 64
+
+[data]
+root = "../../benachmark_Train_MATSP_500"
+train_dir = "train"
+validation_dir = "validation"
+
+[checkpoint]
+save_interval = 5
+resume = ""
+
+[runtime]
+device = "cuda"
+
+[output]
+results_root = "../results/bias_head_finetune/training"
+checkpoints_root = "../results/bias_head_finetune/checkpoints"
