@@ -1,0 +1,16 @@
+# Both reward groups share this training and validation protocol.
+data_root = "benachmark_Train_MATSP_Multiopt_500"
+initial_checkpoint = "gb_2_maco_POMO/results/learnable_ball_20261015/checkpoints/best.pt"
+output_dir = "gb_2_maco_POMO/results/dual_reward/run_seed_42_multiopt_500_10epoch"
+epochs = 10
+validation_interval = 2
+batch_size = 64
+micro_batch_size = 8
+learning_rate = 0.0001
+seed = 42
+device = "cuda"
+auxiliary_lambda = 0.3
+validation_samples_per_start = 8
+validation_optb_checks = 50000
+multi_quality_gap_tolerance_pct = 0.5
+multi_allowed_certified_hit_loss = 1

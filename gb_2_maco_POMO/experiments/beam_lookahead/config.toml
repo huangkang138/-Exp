@@ -1,0 +1,15 @@
+[search]
+beam_width = 8
+ball_top_k = 2
+entry_top_k = 3
+local_beam_width = 8
+lookahead_depth = 16
+quality_slack = 0.01
+routes_per_start = 9
+budget_multipliers = [32, 64]
+
+[experiment]
+validation_device = "cuda"
+formal_device = "cpu"
+seed = 42
+optb_checks_per_case = 50000

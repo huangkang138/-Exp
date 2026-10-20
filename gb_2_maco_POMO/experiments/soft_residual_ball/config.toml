@@ -1,0 +1,12 @@
+# Independent 10-epoch run. All validation epochs use the same search budget.
+data_root = "benachmark_Train_MATSP_500"
+epochs = 10
+batch_size = 8
+learning_rate = 0.0001
+seed = 42
+device = "cuda"
+residual_bound = 2.0
+gradient_clip_norm = 1.0
+validation_samples_per_start = 8
+validation_optb_checks = 50000
+multi_quality_gap_tolerance_pct = 0.05

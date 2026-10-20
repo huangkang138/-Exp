@@ -1,0 +1,8 @@
+# Training reward only. The same rollout count and 10 epochs are used in J1/J2.
+two_opt_max_pair_checks_per_route = 2048
+quality_ratio = 1.005
+raw_advantage_weight = 0.5
+two_opt_advantage_weight = 0.5
+diversity_advantage_weight = 0.1
+cross_ball_novelty_weight = 0.5
+within_ball_novelty_weight = 0.5

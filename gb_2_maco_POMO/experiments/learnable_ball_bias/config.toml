@@ -1,0 +1,17 @@
+# Edit these values before training. Run A, B and C with the same file/seed.
+data_root = "benachmark_Train_MATSP_Multiopt_500"
+initial_checkpoint = "gb_2_maco_POMO/results/learnable_ball_20261015/checkpoints/best.pt"
+epochs = 10
+batch_size = 8
+learning_rate = 0.0001
+seed = 42
+device = "cuda"
+validation_interval = 2
+validation_samples_per_start = 8
+validation_optb_checks = 50000
+ball_bias_bound = 2.0
+diversity_lambda = 0.02
+diversity_routes_per_instance = 8
+diversity_tolerance_pct = 0.0
+multi_quality_gap_tolerance_pct = 0.5
+multi_allowed_certified_hit_loss = 1
